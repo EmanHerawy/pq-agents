@@ -19,15 +19,19 @@ abstract contract VerifierDeployer is BaseScript {
 
     function deployContract(bytes32 salt) internal virtual returns (address);
 
+    function _networkKey(uint256 chainId) internal view returns (string memory) {
+        if (chainId == 11155111) return "sepolia";
+        if (chainId == 1)        return "mainnet";
+        if (chainId == 421614)   return "arbitrumSepolia";
+        if (chainId == 84532)    return "baseSepolia";
+        if (chainId == 5042002)  return "arcTestnet";
+        return vm.toString(chainId);
+    }
+
     function run() external returns (address) {
         string memory json = vm.readFile("deployments/deployments.json");
 
-        string memory network;
-        if (block.chainid == 11155111) network = "sepolia";
-        else if (block.chainid == 1) network = "mainnet";
-        else if (block.chainid == 421614) network = "arbitrumSepolia";
-        else if (block.chainid == 84532) network = "baseSepolia";
-        else revert("Unsupported chain");
+        string memory network = _networkKey(block.chainid);
 
         string memory basePath =
             string.concat(".", network, ".verifiers.", verifierKey);
