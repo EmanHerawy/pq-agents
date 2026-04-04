@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { NavLinks } from "./components/NavLinks";
+import { ThemeSync } from "./components/ThemeSync";
 
 export const metadata: Metadata = {
   title: "Post Quantum Agent — ETHGlobal Cannes 2026",
@@ -11,16 +12,9 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="h-full">
-      {/* No-flash theme script — runs before React hydrates */}
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}})()`,
-          }}
-        />
-      </head>
+    <html lang="en" className="h-full" suppressHydrationWarning>
       <body className="min-h-full flex flex-col antialiased" style={{ background: "var(--bg-page)", color: "var(--text-1)" }}>
+        <ThemeSync />
         <Header />
         <main className="flex-1 flex flex-col">{children}</main>
         <ActivityFeed />

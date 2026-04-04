@@ -23,11 +23,11 @@
 :root {
   /* Backgrounds */
   --bg-page:       #05080f;
-  --bg-card:       #0d1117;
-  --bg-deep:       #090d13;
-  --bg-elevated:   #111822;
-  --bg-elevated-2: #131920;
-  --bg-input:      #161e28;
+  --bg-card:       #111928;
+  --bg-deep:       #0a0f1a;
+  --bg-elevated:   #182230;
+  --bg-elevated-2: #141c28;
+  --bg-input:      #1c2738;
   /* Text */
   --text-1:        #f0e6c8;
   --text-2:        #b0a898;
@@ -39,13 +39,13 @@
   --text-warm-2:   #c8b898;
   --text-warm-3:   #8a8878;
   /* Borders */
-  --border-1:      #252d3a;
-  --border-2:      #2a3545;
-  --border-3:      #1e2530;
+  --border-1:      #263040;
+  --border-2:      #2e3c50;
+  --border-3:      #1e2a38;
   /* Overlays */
   --overlay:       rgba(5,8,15,0.92);
   --overlay-heavy: rgba(5,8,15,0.94);
-  --header-bg:     rgba(5,8,15,0.95);
+  --header-bg:     rgba(5,8,15,0.96);
 }
 
 [data-theme="light"] {
@@ -126,3 +126,5 @@ html, body {
   100% { transform: rotate(360deg) scale(1);    opacity: 1; }
 }
 .pq-spinner { animation: pq-scan 1.2s cubic-bezier(0.4,0,0.2,1) infinite; }
+/* theme-rebuild-trigger */
+/* r2 */

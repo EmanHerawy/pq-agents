@@ -188,7 +188,7 @@ function Spinner() {
 
 function OrchestrationPlanPanel({ plan }: { plan: OrchestrationPlan }) {
   return (
-    <div className="rounded-lg p-4 mb-5" style={{ background: "#090d13", border: "1px solid #2a3545" }}>
+    <div className="rounded-lg p-4 mb-5" style={{ background: "var(--bg-deep)", border: "1px solid var(--border-2)" }}>
       <p className="text-xs font-mono mb-4" style={{ color: "#c9a84c" }}>◈ ORCHESTRATION PLAN</p>
       <div className="space-y-3">
         {[
@@ -198,8 +198,8 @@ function OrchestrationPlanPanel({ plan }: { plan: OrchestrationPlan }) {
           { label: "EFFICIENCY NOTE", value: plan.costNote },
         ].map(({ label, value }) => (
           <div key={label} className="grid grid-cols-3 gap-2 items-start">
-            <p className="text-xs font-mono" style={{ color: "#6a7080" }}>{label}</p>
-            <p className="col-span-2 text-sm" style={{ color: "#c8b898" }}>{value}</p>
+            <p className="text-xs font-mono" style={{ color: "var(--text-4)" }}>{label}</p>
+            <p className="col-span-2 text-sm" style={{ color: "var(--text-warm-2)" }}>{value}</p>
           </div>
         ))}
       </div>
@@ -215,13 +215,13 @@ function BuyModal({ service, agent, onClose, onConfirm }: {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(5,8,15,0.92)", backdropFilter: "blur(8px)" }}
+      style={{ background: "var(--overlay)", backdropFilter: "blur(8px)" }}
     >
-      <div className="w-full max-w-md rounded-xl p-6" style={{ background: "#0d1117", border: "1px solid #c9a84c60" }}>
+      <div className="w-full max-w-md rounded-xl p-6" style={{ background: "var(--bg-card)", border: "1px solid #c9a84c60" }}>
         <div className="flex items-start justify-between mb-5">
           <div>
             <p className="text-xs font-mono mb-1" style={{ color: "#c9a84c" }}>PURCHASE REQUEST</p>
-            <h3 className="text-xl font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "#f0e6c8" }}>
+            <h3 className="text-xl font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--text-1)" }}>
               {service.name}
             </h3>
             <span
@@ -237,17 +237,17 @@ function BuyModal({ service, agent, onClose, onConfirm }: {
         <div className="space-y-3 mb-5">
           {[
             { label: "Agent",    value: <span className="font-mono text-sm" style={{ color: "#c9a84c" }}>{agent.ens}</span> },
-            { label: "Service",  value: <span className="text-sm text-right" style={{ color: "#e8dcc0" }}>{service.description}</span> },
-            { label: "Rated on", value: <span className="text-xs font-mono text-right" style={{ color: "#c8b898" }}>{service.ratingCriteria.join(" · ")}</span> },
+            { label: "Service",  value: <span className="text-sm text-right" style={{ color: "var(--text-warm-1)" }}>{service.description}</span> },
+            { label: "Rated on", value: <span className="text-xs font-mono text-right" style={{ color: "var(--text-warm-2)" }}>{service.ratingCriteria.join(" · ")}</span> },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between gap-4 items-start">
-              <span className="text-sm flex-shrink-0" style={{ color: "#8a8878" }}>{label}</span>
+              <span className="text-sm flex-shrink-0" style={{ color: "var(--text-warm-3)" }}>{label}</span>
               {value}
             </div>
           ))}
-          <div className="h-px" style={{ background: "#2a3545" }} />
+          <div className="h-px" style={{ background: "var(--border-2)" }} />
           <div className="flex justify-between items-center">
-            <span className="text-sm" style={{ color: "#8a8878" }}>Total</span>
+            <span className="text-sm" style={{ color: "var(--text-warm-3)" }}>Total</span>
             <span className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#c9a84c" }}>
               {service.price} USDC
             </span>
@@ -256,12 +256,12 @@ function BuyModal({ service, agent, onClose, onConfirm }: {
 
         {agent.orchestration && <OrchestrationPlanPanel plan={agent.orchestration} />}
 
-        <div className="rounded-lg p-3 mb-5 text-sm font-mono" style={{ background: "#090d13", color: "#8a9898", border: "1px solid #2a3545" }}>
+        <div className="rounded-lg p-3 mb-5 text-sm font-mono" style={{ background: "var(--bg-deep)", color: "var(--text-3)", border: "1px solid var(--border-2)" }}>
           ◈ Signed with PQ account — ECDSA + ML-DSA-44
         </div>
 
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg text-sm" style={{ background: "#1e2530", color: "#a09888" }}>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg text-sm" style={{ background: "var(--border-3)", color: "var(--text-3)" }}>
             Cancel
           </button>
           <button onClick={onConfirm} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "linear-gradient(135deg, #c9a84c, #7a6130)", color: "#05080f" }}>
@@ -320,14 +320,14 @@ function ChatModal({ agent, onClose }: { agent: Agent; onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(5,8,15,0.94)", backdropFilter: "blur(10px)" }}
+      style={{ background: "var(--overlay-heavy)", backdropFilter: "blur(10px)" }}
     >
       <div
         className="w-full max-w-2xl flex flex-col rounded-2xl overflow-hidden"
-        style={{ background: "#0a0e16", border: "1px solid #252d3a", height: "80vh", maxHeight: "680px" }}
+        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-1)", height: "80vh", maxHeight: "680px" }}
       >
         {/* Header — both agents */}
-        <div className="flex items-center justify-between px-5 py-4" style={{ background: "#090d13", borderBottom: "1px solid #252d3a" }}>
+        <div className="flex items-center justify-between px-5 py-4" style={{ background: "var(--bg-deep)", borderBottom: "1px solid var(--border-1)" }}>
           <div className="flex items-center gap-3">
             {/* My Agent */}
             <div className="text-center">
@@ -343,7 +343,7 @@ function ChatModal({ agent, onClose }: { agent: Agent; onClose: () => void }) {
             {/* Arrow */}
             <div className="flex flex-col items-center gap-0.5 px-1">
               <div className="h-px w-12" style={{ background: "linear-gradient(90deg,#c9a84c60,#c9a84c)" }} />
-              <p className="text-xs font-mono" style={{ color: "#4a5565" }}>agent-to-agent</p>
+              <p className="text-xs font-mono" style={{ color: "var(--text-5)" }}>agent-to-agent</p>
               <div className="h-px w-12" style={{ background: "linear-gradient(90deg,#c9a84c,#c9a84c60)" }} />
             </div>
 
@@ -390,12 +390,12 @@ function ChatModal({ agent, onClose }: { agent: Agent; onClose: () => void }) {
                   <div
                     className="px-4 py-2.5 rounded-2xl text-sm leading-relaxed"
                     style={isMe
-                      ? { background: "#c9a84c18", border: "1px solid #c9a84c30", color: "#e8dcc0", borderBottomLeftRadius: "6px" }
-                      : { background: agentBg,      border: `1px solid ${agentColor}25`, color: "#e8dcc0", borderBottomRightRadius: "6px" }}
+                      ? { background: "#c9a84c18", border: "1px solid #c9a84c30", color: "var(--text-warm-1)", borderBottomLeftRadius: "6px" }
+                      : { background: agentBg,      border: `1px solid ${agentColor}25`, color: "var(--text-warm-1)", borderBottomRightRadius: "6px" }}
                   >
                     {msg.text}
                   </div>
-                  <p className="text-xs font-mono px-1" style={{ color: "#4a5565" }}>
+                  <p className="text-xs font-mono px-1" style={{ color: "var(--text-5)" }}>
                     {isMe ? "MyAgent-01" : agent.name} · {msg.ts}
                   </p>
                 </div>
@@ -429,7 +429,7 @@ function ChatModal({ agent, onClose }: { agent: Agent; onClose: () => void }) {
         </div>
 
         {/* Input */}
-        <div className="px-4 py-3 flex gap-2" style={{ borderTop: "1px solid #252d3a", background: "#090d13" }}>
+        <div className="px-4 py-3 flex gap-2" style={{ borderTop: "1px solid var(--border-1)", background: "var(--bg-deep)" }}>
           <input
             type="text"
             value={input}
@@ -437,7 +437,7 @@ function ChatModal({ agent, onClose }: { agent: Agent; onClose: () => void }) {
             onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
             placeholder={`Send as MyAgent-01 → ${agent.name}...`}
             className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
-            style={{ background: "#0d1117", border: "1px solid #252d3a", color: "#e8dcc0" }}
+            style={{ background: "var(--bg-card)", border: "1px solid var(--border-1)", color: "var(--text-warm-1)" }}
           />
           <button
             onClick={send}
@@ -498,8 +498,8 @@ function AgentCard({ agent }: { agent: Agent }) {
       <div
         className="agent-card rounded-xl p-6 flex flex-col gap-4 h-full"
         style={{
-          background: "#0d1117",
-          border: `1px solid ${agent.isQuantumSafe ? "#252d3a" : "#ef444440"}`,
+          background: "var(--bg-card)",
+          border: `1px solid ${agent.isQuantumSafe ? "var(--border-1)" : "#ef444440"}`,
         }}
       >
         {/* Badges */}
@@ -524,19 +524,19 @@ function AgentCard({ agent }: { agent: Agent }) {
 
         {/* Identity */}
         <div>
-          <h3 className="text-xl font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "#f0e6c8" }}>
+          <h3 className="text-xl font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--text-1)" }}>
             {agent.name}
           </h3>
           <p className="text-sm font-mono mt-1" style={{ color: "#c9a84c" }}>{agent.ens}</p>
         </div>
 
         {/* Bio */}
-        <p className="text-base leading-relaxed" style={{ color: "#b0a898" }}>{agent.bio}</p>
+        <p className="text-base leading-relaxed" style={{ color: "var(--text-2)" }}>{agent.bio}</p>
 
         {/* Skills */}
         <div className="flex flex-wrap gap-2">
           {agent.skills.map((s) => (
-            <span key={s} className="text-sm px-3 py-1 rounded-full" style={{ background: "#161e28", color: "#c8b898", border: "1px solid #2a3545" }}>
+            <span key={s} className="text-sm px-3 py-1 rounded-full" style={{ background: "var(--bg-input)", color: "var(--text-warm-2)", border: "1px solid var(--border-2)" }}>
               {s}
             </span>
           ))}
@@ -546,7 +546,7 @@ function AgentCard({ agent }: { agent: Agent }) {
 
         {/* Services */}
         <div className="space-y-4 flex-1">
-          <p className="text-xs font-mono tracking-widest" style={{ color: "#6a7080" }}>SERVICES</p>
+          <p className="text-xs font-mono tracking-widest" style={{ color: "var(--text-4)" }}>SERVICES</p>
           {agent.services.map((service) => {
             const tier = TIER_META[service.tier];
             return (
@@ -554,7 +554,7 @@ function AgentCard({ agent }: { agent: Agent }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <p className="text-base font-semibold" style={{ color: "#e8dcc0" }}>{service.name}</p>
+                      <p className="text-base font-semibold" style={{ color: "var(--text-warm-1)" }}>{service.name}</p>
                       <span
                         className="text-xs font-mono px-2 py-0.5 rounded-full"
                         style={{ background: tier.bg, color: tier.color, border: `1px solid ${tier.border}` }}
@@ -562,14 +562,14 @@ function AgentCard({ agent }: { agent: Agent }) {
                         {tier.label}
                       </span>
                     </div>
-                    <p className="text-sm" style={{ color: "#9a9080" }}>{service.description}</p>
-                    <p className="text-xs font-mono mt-1" style={{ color: "#7a8090" }}>
+                    <p className="text-sm" style={{ color: "var(--text-3)" }}>{service.description}</p>
+                    <p className="text-xs font-mono mt-1" style={{ color: "var(--text-4)" }}>
                       {service.ratingCriteria.join(" · ")}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
                     <span className="text-base font-bold font-mono" style={{ color: "#c9a84c" }}>
-                      {service.price} <span className="text-xs font-normal" style={{ color: "#8a8878" }}>USDC</span>
+                      {service.price} <span className="text-xs font-normal" style={{ color: "var(--text-warm-3)" }}>USDC</span>
                     </span>
                     {agent.isQuantumSafe && (
                       <button
@@ -593,7 +593,7 @@ function AgentCard({ agent }: { agent: Agent }) {
           <button
             onClick={() => setChatOpen(true)}
             className="w-full py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all"
-            style={{ background: "#161e28", border: "1px solid #252d3a", color: "#9a9080" }}
+            style={{ background: "var(--bg-input)", border: "1px solid var(--border-1)", color: "var(--text-3)" }}
           >
             <span style={{ color: typeMeta?.color ?? "#c9a84c" }}>◈</span>
             Chat with {agent.name}
@@ -613,7 +613,7 @@ function AgentCard({ agent }: { agent: Agent }) {
           </div>
         )}
 
-        <p className="text-xs font-mono" style={{ color: "#3a4555" }}>{agent.address}</p>
+        <p className="text-xs font-mono" style={{ color: "var(--text-6)" }}>{agent.address}</p>
       </div>
     </>
   );
@@ -626,20 +626,20 @@ export default function MarketplacePage() {
   return (
     <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#f0e6c8" }}>
+        <h1 className="text-4xl md:text-5xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--text-1)" }}>
           Agent Marketplace
         </h1>
       </div>
 
       <div className="flex items-center gap-4 mb-8">
-        <span className="text-sm font-mono" style={{ color: "#9a9080" }}>
+        <span className="text-sm font-mono" style={{ color: "var(--text-3)" }}>
           {safe.length} quantum-safe
         </span>
-        <span className="text-sm font-mono" style={{ color: "#3a4555" }}>·</span>
+        <span className="text-sm font-mono" style={{ color: "var(--text-6)" }}>·</span>
         <span className="text-sm font-mono" style={{ color: "#f87171" }}>
           {flagged.length} flagged
         </span>
-        <div className="flex-1 h-px" style={{ background: "#252d3a" }} />
+        <div className="flex-1 h-px" style={{ background: "var(--border-1)" }} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

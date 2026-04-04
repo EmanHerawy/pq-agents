@@ -55,7 +55,7 @@ export default function MyAgentPage() {
         </p>
         <h1
           className="text-4xl md:text-5xl font-bold"
-          style={{ fontFamily: "'Playfair Display', serif", color: "#f0e6c8" }}
+          style={{ fontFamily: "'Playfair Display', serif", color: "var(--text-1)" }}
         >
           My Agent
         </h1>
@@ -64,7 +64,7 @@ export default function MyAgentPage() {
       {/* Agent card */}
       <div
         className="rounded-xl p-6 mb-6"
-        style={{ background: "#0d1117", border: "1px solid #c9a84c40" }}
+        style={{ background: "var(--bg-card)", border: "1px solid #c9a84c40" }}
       >
         {/* Top row */}
         <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
@@ -85,7 +85,7 @@ export default function MyAgentPage() {
             </div>
             <h2
               className="text-2xl font-semibold"
-              style={{ fontFamily: "'Playfair Display', serif", color: "#f0e6c8" }}
+              style={{ fontFamily: "'Playfair Display', serif", color: "var(--text-1)" }}
             >
               {MY_AGENT.name}
             </h2>
@@ -107,12 +107,12 @@ export default function MyAgentPage() {
           </button>
         </div>
 
-        <p className="text-sm leading-relaxed mb-5" style={{ color: "#9a9080" }}>{MY_AGENT.bio}</p>
+        <p className="text-sm leading-relaxed mb-5" style={{ color: "var(--text-3)" }}>{MY_AGENT.bio}</p>
 
         {/* Skills */}
         <div className="flex flex-wrap gap-1.5 mb-5">
           {MY_AGENT.skills.map((s) => (
-            <span key={s} className="text-xs px-2.5 py-1 rounded-full" style={{ background: "#131920", color: "#c8b898", border: "1px solid #1e2530" }}>
+            <span key={s} className="text-xs px-2.5 py-1 rounded-full" style={{ background: "var(--bg-elevated-2)", color: "var(--text-warm-2)", border: "1px solid var(--border-3)" }}>
               {s}
             </span>
           ))}
@@ -123,11 +123,11 @@ export default function MyAgentPage() {
           {[
             { label: "BALANCE", value: `${MY_AGENT.balance} USDC`, color: "#c9a84c" },
             { label: "EARNED", value: `${MY_AGENT.totalEarned} USDC`, color: "#22c55e" },
-            { label: "SPENT", value: `${MY_AGENT.totalSpent} USDC`, color: "#f0e6c8" },
+            { label: "SPENT", value: `${MY_AGENT.totalSpent} USDC`, color: "var(--text-1)" },
           ].map(({ label, value, color }) => (
-            <div key={label} className="rounded-lg p-3 text-center" style={{ background: "#090d13", border: "1px solid #1e2530" }}>
+            <div key={label} className="rounded-lg p-3 text-center" style={{ background: "var(--bg-deep)", border: "1px solid var(--border-3)" }}>
               <p className="text-lg font-bold font-mono" style={{ color }}>{value}</p>
-              <p className="text-xs font-mono mt-0.5" style={{ color: "#9a9080" }}>{label}</p>
+              <p className="text-xs font-mono mt-0.5" style={{ color: "var(--text-3)" }}>{label}</p>
             </div>
           ))}
         </div>
@@ -136,13 +136,13 @@ export default function MyAgentPage() {
 
         {/* Services */}
         <div>
-          <p className="text-xs font-mono mb-3" style={{ color: "#9a9080" }}>SERVICES OFFERED</p>
+          <p className="text-xs font-mono mb-3" style={{ color: "var(--text-3)" }}>SERVICES OFFERED</p>
           <div className="space-y-3">
             {MY_AGENT.services.map((svc) => (
               <div key={svc.name} className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm font-medium" style={{ color: "#f0e6c8" }}>{svc.name}</p>
-                  <p className="text-xs" style={{ color: "#9a9080" }}>{svc.description}</p>
+                  <p className="text-sm font-medium" style={{ color: "var(--text-1)" }}>{svc.name}</p>
+                  <p className="text-xs" style={{ color: "var(--text-3)" }}>{svc.description}</p>
                 </div>
                 <span className="text-sm font-semibold font-mono flex-shrink-0" style={{ color: "#c9a84c" }}>
                   {svc.price} USDC
@@ -153,10 +153,10 @@ export default function MyAgentPage() {
         </div>
 
         {/* Addresses */}
-        <div className="mt-5 pt-4 space-y-1" style={{ borderTop: "1px solid #1e2530" }}>
+        <div className="mt-5 pt-4 space-y-1" style={{ borderTop: "1px solid var(--border-3)" }}>
           <div className="flex justify-between text-xs font-mono">
-            <span style={{ color: "#6a7080" }}>ECDSA</span>
-            <span style={{ color: "#4a5565" }}>{MY_AGENT.address}</span>
+            <span style={{ color: "var(--text-4)" }}>ECDSA</span>
+            <span style={{ color: "var(--text-5)" }}>{MY_AGENT.address}</span>
           </div>
           <div className="flex justify-between text-xs font-mono">
             <span style={{ color: "#c9a84c" }}>PQ ACCOUNT</span>
@@ -167,16 +167,16 @@ export default function MyAgentPage() {
 
       {/* Chat panel */}
       {chatOpen && (
-        <div className="rounded-xl overflow-hidden" style={{ background: "#0d1117", border: "1px solid #c9a84c30" }}>
-          <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: "#1e2530", background: "#090d13" }}>
+        <div className="rounded-xl overflow-hidden" style={{ background: "var(--bg-card)", border: "1px solid #c9a84c30" }}>
+          <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--border-3)", background: "var(--bg-deep)" }}>
             <span className="w-2 h-2 rounded-full" style={{ background: "#22c55e" }} />
-            <span className="text-xs font-mono" style={{ color: "#9a9080" }}>AGENT TERMINAL</span>
+            <span className="text-xs font-mono" style={{ color: "var(--text-3)" }}>AGENT TERMINAL</span>
           </div>
 
           {/* Messages */}
           <div className="p-4 space-y-3 min-h-40 max-h-80 overflow-y-auto">
             {messages.length === 0 && (
-              <p className="text-xs font-mono text-center" style={{ color: "#4a5565" }}>
+              <p className="text-xs font-mono text-center" style={{ color: "var(--text-5)" }}>
                 Say something to your agent...
               </p>
             )}
@@ -186,8 +186,8 @@ export default function MyAgentPage() {
                   className="max-w-xs px-3 py-2 rounded-lg text-sm"
                   style={
                     m.role === "user"
-                      ? { background: "#c9a84c18", color: "#f0e6c8", border: "1px solid #c9a84c30" }
-                      : { background: "#131920", color: "#c8b898", border: "1px solid #1e2530" }
+                      ? { background: "#c9a84c18", color: "var(--text-1)", border: "1px solid #c9a84c30" }
+                      : { background: "var(--bg-elevated-2)", color: "var(--text-warm-2)", border: "1px solid var(--border-3)" }
                   }
                 >
                   {m.text}
@@ -196,7 +196,7 @@ export default function MyAgentPage() {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="px-3 py-2 rounded-lg text-sm font-mono" style={{ background: "#131920", color: "#c9a84c", border: "1px solid #1e2530" }}>
+                <div className="px-3 py-2 rounded-lg text-sm font-mono" style={{ background: "var(--bg-elevated-2)", color: "#c9a84c", border: "1px solid var(--border-3)" }}>
                   ···
                 </div>
               </div>
@@ -212,7 +212,7 @@ export default function MyAgentPage() {
               onKeyDown={(e) => e.key === "Enter" && !loading && sendMessage()}
               placeholder="Ask your agent anything..."
               className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
-              style={{ background: "#090d13", border: "1px solid #1e2530", color: "#f0e6c8" }}
+              style={{ background: "var(--bg-deep)", border: "1px solid var(--border-3)", color: "var(--text-1)" }}
             />
             <button
               onClick={sendMessage}

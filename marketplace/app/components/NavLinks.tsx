@@ -5,39 +5,42 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 function ThemeToggle() {
-  const [dark, setDark] = useState(true);
+  // null = not yet mounted (SSR safe)
+  const [isDark, setIsDark] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Read from html attribute set by the no-flash script
-    const isDark = document.documentElement.getAttribute("data-theme") !== "light";
-    setDark(isDark);
+    setIsDark(document.documentElement.getAttribute("data-theme") !== "light");
   }, []);
 
   function toggle() {
-    const next = !dark;
-    setDark(next);
-    if (next) {
-      document.documentElement.removeAttribute("data-theme");
-      localStorage.setItem("theme", "dark");
-    } else {
+    // Always read current state from DOM to avoid stale closure
+    const currentlyDark = document.documentElement.getAttribute("data-theme") !== "light";
+    if (currentlyDark) {
       document.documentElement.setAttribute("data-theme", "light");
       localStorage.setItem("theme", "light");
+      setIsDark(false);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+      localStorage.setItem("theme", "dark");
+      setIsDark(true);
     }
   }
 
+  // suppressHydrationWarning because icon/color differs between SSR (null) and client
   return (
     <button
       onClick={toggle}
-      title={dark ? "Switch to light mode" : "Switch to dark mode"}
+      suppressHydrationWarning
+      title={isDark === false ? "Switch to dark mode" : "Switch to light mode"}
       className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
       style={{
         background: "var(--bg-elevated)",
         border: "1px solid var(--border-1)",
-        color: dark ? "#c9a84c" : "#7a6130",
+        color: isDark === false ? "#7a6130" : "#c9a84c",
         fontSize: "15px",
       }}
     >
-      {dark ? "☀" : "☾"}
+      {isDark === false ? "☾" : "☀"}
     </button>
   );
 }
