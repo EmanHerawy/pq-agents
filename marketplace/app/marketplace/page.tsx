@@ -2,6 +2,8 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useAccount, useSendTransaction, useSwitchChain } from "wagmi";
+import { parseEther } from "viem";
 
 type AgentType = "consensus" | "specialist" | "librarian";
 type ServiceTier = "consensus" | "special" | "validation";
@@ -484,6 +486,9 @@ function ChatModal({ agent, onClose }: { agent: Agent; onClose: () => void }) {
 
 // ─── Agent Card ────────────────────────────────────────────────────────────────
 
+// Base chain IDs where World AgenticKit / wallet payment is available
+const BASE_CHAIN_IDS = new Set([8453, 84532]);
+
 function AgentCard({ agent }: { agent: Agent }) {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -492,21 +497,54 @@ function AgentCard({ agent }: { agent: Agent }) {
   const [error, setError] = useState<string | null>(null);
   const [ledgerRequired, setLedgerRequired] = useState<{ amount: number; to: string; service: string; instructions: string[] } | null>(null);
 
+  // Wallet state (wagmi)
+  const { address: walletAddress, chainId: walletChainId, isConnected } = useAccount();
+  const { sendTransactionAsync } = useSendTransaction();
+  const { switchChainAsync } = useSwitchChain();
+
   const typeMeta = agent.type ? TYPE_META[agent.type] : null;
   const chainMeta = agent.chainId ? CHAIN_LABELS[agent.chainId] : null;
   const networkMismatch = agent.chainId !== undefined && agent.chainId !== ACTIVE_CHAIN_ID;
 
+  // Whether this agent accepts wallet payments (Base / Base Sepolia)
+  const isBaseAgent = agent.chainId !== undefined && BASE_CHAIN_IDS.has(agent.chainId);
+
   async function handleBuy(service: Service) {
-    if (networkMismatch) {
-      const activeMeta = CHAIN_LABELS[ACTIVE_CHAIN_ID];
-      setError(`Network mismatch: your agent is on ${activeMeta?.label ?? ACTIVE_CHAIN_ID} but this agent is on ${chainMeta?.label ?? agent.chainId}. Switch NEXT_PUBLIC_TARGET_NETWORK to pay this agent.`);
-      return;
-    }
     setBuying(true);
     setError(null);
     setLedgerRequired(null);
     setSelectedService(null);
+
     try {
+      // ── Path A: Base / Base Sepolia → wallet payment (World AgenticKit / WalletConnect) ──
+      if (isBaseAgent && isConnected && walletAddress) {
+        // Ensure wallet is on the right chain
+        if (walletChainId !== agent.chainId) {
+          try {
+            await switchChainAsync({ chainId: agent.chainId! });
+          } catch {
+            throw new Error(`Please switch your wallet to ${chainMeta?.label ?? "Base"} to pay this agent.`);
+          }
+        }
+        // Send ETH equivalent (price in USDC → treat as micro-ETH for demo)
+        // In production this would be a USDC transfer via writeContract
+        const recipient = (agent.pqAccount || agent.address) as `0x${string}`;
+        const ethValue = parseEther((service.price * 0.00001).toFixed(8)); // demo: price × 0.00001 ETH
+        const hash = await sendTransactionAsync({
+          to: recipient,
+          value: ethValue,
+          chainId: agent.chainId,
+        });
+        setTxHash(hash);
+        return;
+      }
+
+      // ── Path B: Non-Base or no wallet → PQ vault signing via backend ────────
+      if (networkMismatch && !isBaseAgent) {
+        const activeMeta = CHAIN_LABELS[ACTIVE_CHAIN_ID];
+        throw new Error(`Network mismatch: your server agent is on ${activeMeta?.label ?? ACTIVE_CHAIN_ID} but this agent is on ${chainMeta?.label ?? agent.chainId}. Connect a wallet to pay directly.`);
+      }
+
       const res = await fetch("/api/agent/buy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -633,14 +671,24 @@ function AgentCard({ agent }: { agent: Agent }) {
                       {service.price} <span className="text-xs font-normal" style={{ color: "var(--text-warm-3)" }}>USDC</span>
                     </span>
                     {agent.isQuantumSafe && (
-                      <button
-                        onClick={() => setSelectedService(service)}
-                        disabled={buying}
-                        className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-semibold disabled:opacity-40"
-                        style={{ background: "#c9a84c20", border: "1px solid #c9a84c60", color: "#c9a84c" }}
-                      >
-                        {buying ? <Spinner /> : "BUY"}
-                      </button>
+                      isBaseAgent && !isConnected ? (
+                        <span className="text-xs font-mono px-2 py-1 rounded-lg" style={{ color: "#c9a84c80", border: "1px dashed #c9a84c40" }}>
+                          connect wallet
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setSelectedService(service)}
+                          disabled={buying}
+                          className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-semibold disabled:opacity-40"
+                          style={{
+                            background: isBaseAgent ? "#60a5fa20" : "#c9a84c20",
+                            border: `1px solid ${isBaseAgent ? "#60a5fa60" : "#c9a84c60"}`,
+                            color: isBaseAgent ? "#93c5fd" : "#c9a84c",
+                          }}
+                        >
+                          {buying ? <Spinner /> : isBaseAgent ? "⬡ PAY" : "BUY"}
+                        </button>
+                      )
                     )}
                   </div>
                 </div>

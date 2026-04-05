@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { NavLinks } from "./components/NavLinks";
 import { ThemeSync } from "./components/ThemeSync";
+import { WalletProviders } from "./components/WalletProviders";
+import { ConnectButtonWrapper } from "./components/ConnectButtonWrapper";
 
 export const metadata: Metadata = {
   title: "Post Quantum Agent — ETHGlobal Cannes 2026",
@@ -14,10 +16,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body className="min-h-full flex flex-col antialiased" style={{ background: "var(--bg-page)", color: "var(--text-1)" }}>
-        <ThemeSync />
-        <Header />
-        <main className="flex-1 flex flex-col">{children}</main>
-        <ActivityFeed />
+        <WalletProviders>
+          <ThemeSync />
+          <Header />
+          <main className="flex-1 flex flex-col">{children}</main>
+          <ActivityFeed />
+        </WalletProviders>
       </body>
     </html>
   );
@@ -58,7 +62,10 @@ function Header() {
           </div>
         </a>
 
-        <NavLinks />
+        <div className="flex items-center gap-4">
+          <NavLinks />
+          <ConnectButtonWrapper />
+        </div>
       </div>
     </header>
   );
@@ -74,7 +81,6 @@ function ActivityFeed() {
     "bot-xyz.eth ❌ rejected — ECDSA only · Wall of Shame",
   ];
 
-  // Duplicate for seamless loop
   const doubled = [...events, ...events];
 
   return (
@@ -83,7 +89,6 @@ function ActivityFeed() {
       style={{ background: "var(--bg-deep)", borderColor: "#c9a84c20", height: "36px" }}
     >
       <div className="flex items-center h-full">
-        {/* Live badge */}
         <div
           className="flex-shrink-0 flex items-center gap-1.5 px-4 border-r h-full"
           style={{ borderColor: "#c9a84c20" }}
@@ -91,8 +96,6 @@ function ActivityFeed() {
           <span className="w-1.5 h-1.5 rounded-full pulse-gold" style={{ background: "#c9a84c" }} />
           <span className="text-xs font-mono" style={{ color: "#c9a84c" }}>LIVE</span>
         </div>
-
-        {/* Ticker */}
         <div className="flex-1 overflow-hidden relative">
           <div className="ticker-track flex gap-12 whitespace-nowrap">
             {doubled.map((e, i) => (
