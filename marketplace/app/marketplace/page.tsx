@@ -27,6 +27,7 @@ interface Agent {
   ens: string;
   address: string;
   pqAccount?: string;
+  chainId?: number;
   type?: AgentType;
   skills: string[];
   services: Service[];
@@ -34,6 +35,24 @@ interface Agent {
   bio: string;
   orchestration?: OrchestrationPlan;
 }
+
+const CHAIN_LABELS: Record<number, { label: string; short: string; color: string }> = {
+  5042002: { label: "ARC Testnet",   short: "ARC",         color: "#c9a84c" },
+  84532:   { label: "Base Sepolia",  short: "Base Sepolia", color: "#60a5fa" },
+  11155111:{ label: "Sepolia",       short: "Sepolia",      color: "#a78bfa" },
+  8453:    { label: "Base",          short: "Base",         color: "#3b82f6" },
+  480:     { label: "World Chain",   short: "World",        color: "#4ade80" },
+};
+
+// Active network chainId from env (set at build time — safe to read client-side)
+const ACTIVE_CHAIN_ID = (() => {
+  const net = (process.env.NEXT_PUBLIC_TARGET_NETWORK || "baseSepolia") as string;
+  const map: Record<string, number> = {
+    baseSepolia: 84532, sepolia: 11155111, base: 8453, ethereum: 1, localhost: 31337,
+    arcTestnet: 5042002,
+  };
+  return map[net] ?? 84532;
+})();
 
 const TYPE_META: Record<AgentType, { label: string; fullLabel: string; color: string; bg: string; border: string }> = {
   consensus: { label: "CONSENSUS",   fullLabel: "Cross-Model Consensus",  color: "#c4b0ff", bg: "#a78bfa22", border: "#a78bfa50" },
@@ -51,13 +70,20 @@ const TIER_META: Record<ServiceTier, { label: string; color: string; bg: string;
   validation: { label: "VALIDATION",    color: "#2dd4bf", bg: "#2dd4bf18", border: "#2dd4bf40" },
 };
 
+// Real addresses from scaffolded agents
+// ConsensusAgent   → my-arc-agent2   (ARC Testnet,   chainId 5042002)
+// DomainSpecialist → my-base-agent   (Base Sepolia,  chainId 84532)
+// ContextLibrarian → my-base-agent2  (Base Sepolia,  chainId 84532)
+// ContentBot       → ECDSA-only, no PQ account (wall of shame)
+
 const STATIC_AGENTS: Agent[] = [
   {
     id: "consensus",
     name: "ConsensusAgent",
-    ens: "consensus.eth",
-    address: "0x1A2B...C3D4",
-    pqAccount: "0xaE38...488a",
+    ens: "arc-agent2.eth",
+    address: "0x5549e705e136BAcc8e7577bEC6f336B533ee876F",   // AGENT_ADDRESS (my-arc-agent2)
+    pqAccount: "0x9f6C7A9dFB4d484Cc71E41B8dFD18Ff1c00120E8", // PQ_ACCOUNT_ADDRESS (ARC Testnet)
+    chainId: 5042002,
     type: "consensus",
     skills: ["Cross-Model Voting", "Security Audits", "Logic Verification", "Ambiguity Resolution"],
     services: [
@@ -88,9 +114,10 @@ const STATIC_AGENTS: Agent[] = [
   {
     id: "specialist",
     name: "DomainSpecialist",
-    ens: "specialist.eth",
-    address: "0x5E50...86B1",
-    pqAccount: "0xbC99...1234",
+    ens: "base-agent.eth",
+    address: "0x2d75dED4AC4A70EaDb89aB8F7a2495Fd0e4951eC",   // AGENT_ADDRESS (my-base-agent)
+    pqAccount: "0x58BdaC9100f72FE5fF018E9aeA1103Bf782b7EDf", // PQ_ACCOUNT_ADDRESS (Base Sepolia)
+    chainId: 84532,
     type: "specialist",
     skills: ["Fine-Tuned", "Rust / Axum", "DB Migration", "API Versioning", "Cryptography"],
     services: [
@@ -121,9 +148,10 @@ const STATIC_AGENTS: Agent[] = [
   {
     id: "librarian",
     name: "ContextLibrarian",
-    ens: "librarian.eth",
-    address: "0x9876...dcba",
-    pqAccount: "0xdE77...5678",
+    ens: "base-agent2.eth",
+    address: "0xF8c6D6aB7F393496db5f30f1B49E9d874fcB4B3b",   // AGENT_ADDRESS (my-base-agent2)
+    pqAccount: "0x70d09996E1Fc460E6ACB3B414B80C1f10B6415c5", // PQ_ACCOUNT_ADDRESS (Base Sepolia)
+    chainId: 84532,
     type: "librarian",
     skills: ["RAG", "Vector Store", "PR History", "Internal Docs", "Legacy Codebase"],
     services: [
@@ -155,7 +183,7 @@ const STATIC_AGENTS: Agent[] = [
     id: "writer",
     name: "ContentBot",
     ens: "writer-x.eth",
-    address: "0xDEAD...BEEF",
+    address: "0x5E500CB7B0fAF175aC2c70F5a7235abf93FF86B1", // ECDSA only — no PQ account
     skills: ["Writing", "Content", "SEO"],
     services: [
       {
@@ -462,20 +490,33 @@ function AgentCard({ agent }: { agent: Agent }) {
   const [buying, setBuying] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ledgerRequired, setLedgerRequired] = useState<{ amount: number; to: string; service: string; instructions: string[] } | null>(null);
 
   const typeMeta = agent.type ? TYPE_META[agent.type] : null;
+  const chainMeta = agent.chainId ? CHAIN_LABELS[agent.chainId] : null;
+  const networkMismatch = agent.chainId !== undefined && agent.chainId !== ACTIVE_CHAIN_ID;
 
   async function handleBuy(service: Service) {
+    if (networkMismatch) {
+      const activeMeta = CHAIN_LABELS[ACTIVE_CHAIN_ID];
+      setError(`Network mismatch: your agent is on ${activeMeta?.label ?? ACTIVE_CHAIN_ID} but this agent is on ${chainMeta?.label ?? agent.chainId}. Switch NEXT_PUBLIC_TARGET_NETWORK to pay this agent.`);
+      return;
+    }
     setBuying(true);
     setError(null);
+    setLedgerRequired(null);
     setSelectedService(null);
     try {
       const res = await fetch("/api/agent/buy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentId: agent.id, service: service.name, amount: service.price, to: agent.address }),
+        body: JSON.stringify({ agentId: agent.id, service: service.name, amount: service.price, to: agent.pqAccount || agent.address, chainId: agent.chainId }),
       });
       const data = await res.json();
+      if (res.status === 402 && data.requiresLedger) {
+        setLedgerRequired({ amount: data.amount, to: data.to, service: service.name, instructions: data.instructions });
+        return;
+      }
       if (!res.ok) throw new Error(data.error || "Transaction failed");
       setTxHash(data.txHash);
     } catch (e: unknown) {
@@ -521,7 +562,26 @@ function AgentCard({ agent }: { agent: Agent }) {
               {typeMeta.label}
             </span>
           )}
+          {chainMeta && (
+            <span
+              className="text-xs px-2.5 py-1 rounded-full font-mono"
+              style={{
+                background: networkMismatch ? "#ef444415" : `${chainMeta.color}15`,
+                color: networkMismatch ? "#f87171" : chainMeta.color,
+                border: `1px solid ${networkMismatch ? "#ef444440" : chainMeta.color + "40"}`,
+              }}
+            >
+              ⬡ {chainMeta.short}{networkMismatch ? " ⚠" : ""}
+            </span>
+          )}
         </div>
+
+        {/* Network mismatch warning */}
+        {networkMismatch && chainMeta && (
+          <div className="rounded-lg px-3 py-2 text-xs font-mono" style={{ background: "#ef444410", border: "1px solid #ef444430", color: "#fca5a5" }}>
+            ⚠ Agent is on <span style={{ color: chainMeta.color }}>{chainMeta.label}</span> — your env targets <span style={{ color: CHAIN_LABELS[ACTIVE_CHAIN_ID]?.color ?? "#c9a84c" }}>{CHAIN_LABELS[ACTIVE_CHAIN_ID]?.label ?? ACTIVE_CHAIN_ID}</span>. Set <code>NEXT_PUBLIC_TARGET_NETWORK</code> to pay this agent.
+          </div>
+        )}
 
         {/* Identity */}
         <div>
@@ -607,6 +667,26 @@ function AgentCard({ agent }: { agent: Agent }) {
             ✓ Paid · {txHash}
           </div>
         )}
+        {ledgerRequired && (
+          <div className="rounded-lg p-4 text-sm" style={{ background: "#7c3aed0f", border: "1px solid #7c3aed60", color: "#c4b5fd" }}>
+            <div className="flex items-center gap-2 mb-3 font-semibold">
+              <span>⬗</span>
+              <span>Ledger approval required — ${ledgerRequired.amount} USDC exceeds $20 autonomous limit</span>
+            </div>
+            <ol className="space-y-1 font-mono text-xs mb-3" style={{ color: "#a78bfa" }}>
+              {ledgerRequired.instructions.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+            <button
+              onClick={() => setLedgerRequired(null)}
+              className="text-xs underline"
+              style={{ color: "#7c3aed" }}
+            >
+              dismiss
+            </button>
+          </div>
+        )}
         {error && (
           <div className="rounded-lg p-3 text-sm font-mono flex items-center justify-between" style={{ background: "#ef44440f", border: "1px solid #ef444440", color: "#f87171" }}>
             <span>◈ {error}</span>
@@ -649,7 +729,7 @@ function RegisterModal({ onClose, onRegistered }: {
   const [name, setName] = useState("");
   const [ens, setEns] = useState("");
   const [address, setAddress] = useState("");
-  const [chainId, setChainId] = useState(5042002);
+  const [chainId, setChainId] = useState(84532); // Base Sepolia default — matches TARGET_NETWORK
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState("");
   const [serviceName, setServiceName] = useState("");
@@ -820,39 +900,77 @@ function RegisterModal({ onClose, onRegistered }: {
         {/* Result */}
         {step === "result" && verifyResult && (
           <div className="px-6 py-6 space-y-4">
-            {/* Status checks */}
+            {/* Required checks */}
             {[
-              { label: "Smart contract detected",       ok: verifyResult.isContract },
-              { label: "ERC-4337 + ML-DSA-44 verified", ok: verifyResult.isQuantumSafe },
-              { label: "Human-backed (World ID)",        ok: verifyResult.isHumanBacked, note: verifyResult.humanFoundOn ?? undefined },
-            ].map(({ label, ok, note }) => (
+              { label: "Smart contract detected",       ok: verifyResult.isContract,    required: true },
+              { label: "ERC-4337 + ML-DSA-44 verified", ok: verifyResult.isQuantumSafe, required: true },
+            ].map(({ label, ok, required }) => (
               <div key={label} className="flex items-center gap-3">
                 <span className="text-lg" style={{ color: ok ? "#4ade80" : "#f87171" }}>
                   {ok ? "◈" : "✕"}
                 </span>
                 <span className="text-sm" style={{ color: "var(--text-warm-2)" }}>{label}</span>
-                {note && <span className="text-xs font-mono ml-auto" style={{ color: "var(--text-4)" }}>{note}</span>}
+                {required && !ok && (
+                  <span className="text-xs font-mono ml-auto px-2 py-0.5 rounded-full"
+                    style={{ background: "#ef444415", color: "#f87171", border: "1px solid #ef444430" }}>
+                    required
+                  </span>
+                )}
               </div>
             ))}
+
+            {/* World ID — recommended, not required */}
+            <div className="flex items-start gap-3 rounded-lg p-3"
+              style={{ background: verifyResult.isHumanBacked ? "#22c55e08" : "#c9a84c08",
+                       border: `1px solid ${verifyResult.isHumanBacked ? "#22c55e25" : "#c9a84c25"}` }}>
+              <span className="text-lg mt-0.5" style={{ color: verifyResult.isHumanBacked ? "#4ade80" : "#c9a84c" }}>
+                {verifyResult.isHumanBacked ? "◈" : "⬗"}
+              </span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm" style={{ color: "var(--text-warm-2)" }}>Human-backed (World ID)</span>
+                  {verifyResult.isHumanBacked
+                    ? <span className="text-xs font-mono px-2 py-0.5 rounded-full"
+                        style={{ background: "#22c55e15", color: "#4ade80", border: "1px solid #22c55e30" }}>
+                        {verifyResult.humanFoundOn}
+                      </span>
+                    : <span className="text-xs font-mono px-2 py-0.5 rounded-full"
+                        style={{ background: "#c9a84c12", color: "#c9a84c", border: "1px solid #c9a84c30" }}>
+                        recommended
+                      </span>
+                  }
+                </div>
+                {!verifyResult.isHumanBacked && (
+                  <p className="text-xs leading-relaxed" style={{ color: "var(--text-4)" }}>
+                    Not verified yet — your agent will be listed without the World ID badge.
+                    To add it: open <span style={{ color: "#c9a84c" }}>worldcoin.org/world-app</span>, verify your identity,
+                    then link this agent address via the AgentBook contract on World Chain or Base.
+                  </p>
+                )}
+              </div>
+            </div>
 
             <div className="h-px" style={{ background: "var(--border-2)" }} />
 
             {verifyResult.isQuantumSafe ? (
               <div className="rounded-xl p-4 text-center" style={{ background: "#22c55e0a", border: "1px solid #22c55e30" }}>
-                <p className="font-semibold" style={{ color: "#4ade80", fontFamily: "'Playfair Display', serif" }}>
+                <p className="font-semibold mb-1" style={{ color: "#4ade80", fontFamily: "'Playfair Display', serif" }}>
                   ◈ Agent registered!
                 </p>
-                <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>
-                  {verifyResult.isHumanBacked ? "Quantum-safe & human-backed." : "Quantum-safe. Human verification not found — listed without World ID badge."}
+                <p className="text-sm" style={{ color: "var(--text-3)" }}>
+                  {verifyResult.isHumanBacked
+                    ? "Quantum-safe and human-backed. Full trust established."
+                    : "Quantum-safe. Listed without World ID badge — verify on World App to unlock full trust."}
                 </p>
               </div>
             ) : (
               <div className="rounded-xl p-4 text-center" style={{ background: "#ef44440a", border: "1px solid #ef444430" }}>
-                <p className="font-semibold" style={{ color: "#f87171", fontFamily: "'Playfair Display', serif" }}>
+                <p className="font-semibold mb-1" style={{ color: "#f87171", fontFamily: "'Playfair Display', serif" }}>
                   ✕ Not quantum-safe
                 </p>
-                <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>
-                  This account does not use ML-DSA-44 + ERC-4337. Pre-quantum agents belong on the Wall of Shame.
+                <p className="text-sm" style={{ color: "var(--text-3)" }}>
+                  This address is {!verifyResult.isContract ? "not a deployed contract" : "not an ERC-4337 account with ML-DSA-44"}.
+                  Deploy a ZKNOX PQ account on ARC or Base Sepolia first, then register that address.
                 </p>
               </div>
             )}

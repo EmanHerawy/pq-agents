@@ -166,7 +166,8 @@ export const signUserOpHybrid = async (
 ): Promise<string> => {
   const hash = getUserOpHash(userOp, entryPointAddress, chainId);
   const preQuantumSig = new ethers.Wallet(preQuantumPrivateKey).signingKey.sign(hash).serialized;
-  const postQuantumSig = ethers.hexlify(ml_dsa44.sign(postQuantumSecretKey, ethers.getBytes(hash)));
+  // ml_dsa44.sign(msg, secretKey) — msg first, secretKey second
+  const postQuantumSig = ethers.hexlify(ml_dsa44.sign(ethers.getBytes(hash), postQuantumSecretKey));
   return ethers.AbiCoder.defaultAbiCoder().encode(["bytes", "bytes"], [preQuantumSig, postQuantumSig]);
 };
 

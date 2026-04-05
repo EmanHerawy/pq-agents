@@ -32,6 +32,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
   }
 
+  // ── Spending policy: amounts > $20 require hardware wallet approval ──────────
+  const SPENDING_LIMIT_USD = 20;
+  if (amount > SPENDING_LIMIT_USD) {
+    return NextResponse.json(
+      {
+        requiresLedger: true,
+        amount,
+        to,
+        policy: `Agent spending policy: autonomous signing is capped at $${SPENDING_LIMIT_USD} USDC. ` +
+          `Transactions above this limit must be approved via Ledger hardware wallet.`,
+        instructions: [
+          `1. Connect your Ledger and unlock the Ethereum app`,
+          `2. Run: just send-tx-ledger to=${to} amount=${amount} service="${body.service}"`,
+          `3. Review and approve the transaction on your Ledger device`,
+          `4. The ERC-4337 UserOperation will be submitted after hardware confirmation`,
+        ],
+      },
+      { status: 402 },
+    );
+  }
+
   // Resolve signing keys via 1claw vault (or env fallback)
   const { agentPrivateKey, postQuantumSeed: pqSeed, source } = await resolveSigningKeys();
   const preQuantumSeed = agentPrivateKey || "";
