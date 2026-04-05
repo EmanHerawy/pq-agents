@@ -2,58 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { BrowserProvider } from "ethers";
 import { sendERC4337Transaction } from "@/lib/pq/send-transaction";
 import { getActiveNetwork } from "@/lib/networks";
+import { resolveSigningKeys } from "@/lib/oneclaw-vault";
 
 /**
  * POST /api/agent/buy
  *
- * Sends a real ERC-4337 post-quantum transaction to pay an agent.
- * Keys are resolved in priority order:
- *   1. Plain env vars (AGENT_PRIVATE_KEY, POST_QUANTUM_SEED) if set
- *   2. 1Claw vault — paths: private-keys/agent, private-keys/post-quantum-seed
- *      Requires: ONECLAW_VAULT_ID + (ONECLAW_API_KEY or ONECLAW_AGENT_ID + ONECLAW_AGENT_API_KEY)
- *   3. Simulation mode if neither is available
+ * Sends an ERC-4337 post-quantum transaction to pay an agent.
+ * Keys are resolved via lib/oneclaw-vault.ts:
+ *   1. Plain env vars (AGENT_PRIVATE_KEY, POST_QUANTUM_SEED) — fastest
+ *   2. 1claw vault via SDK (private-keys/agent, private-keys/post-quantum-seed)
+ *   3. Simulation mode if neither available
  */
-
-async function fetchVaultSecret(path: string): Promise<string | null> {
-  const vaultId = (process.env.ONECLAW_VAULT_ID || "").trim();
-  if (!vaultId) return null;
-
-  const base = (process.env.ONECLAW_API_BASE_URL || "https://api.1claw.xyz").replace(/\/$/, "");
-  let token: string | null = null;
-
-  const apiKey = (process.env.ONECLAW_API_KEY || "").trim();
-  const agentId = (process.env.ONECLAW_AGENT_ID || "").trim();
-  const agentKey = (process.env.ONECLAW_AGENT_API_KEY || "").trim();
-
-  if (apiKey) {
-    const res = await fetch(base + "/v1/auth/api-key-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ api_key: apiKey }),
-    });
-    if (!res.ok) return null;
-    token = ((await res.json()) as { access_token: string }).access_token;
-  } else if (agentId && agentKey) {
-    const res = await fetch(base + "/v1/auth/agent-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agent_id: agentId, api_key: agentKey }),
-    });
-    if (!res.ok) return null;
-    token = ((await res.json()) as { access_token: string }).access_token;
-  }
-
-  if (!token) return null;
-
-  const res = await fetch(
-    base + "/v1/vaults/" + vaultId + "/secrets/" + encodeURIComponent(path),
-    { headers: { Authorization: "Bearer " + token } },
-  );
-  if (!res.ok) return null;
-  const j = await res.json() as { value?: string };
-  return typeof j.value === "string" ? j.value.trim() : null;
-}
-
 export async function POST(req: NextRequest) {
   let body: { agentId: string; service: string; amount: number; to: string };
   try {
@@ -73,20 +32,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
   }
 
-  // Resolve keys: plain env first, then vault fallback
-  let preQuantumSeed = (process.env.AGENT_PRIVATE_KEY || "").trim();
-  let postQuantumSeed = (process.env.POST_QUANTUM_SEED || "").trim();
+  // Resolve signing keys via 1claw vault (or env fallback)
+  const { agentPrivateKey, postQuantumSeed: pqSeed, source } = await resolveSigningKeys();
+  const preQuantumSeed = agentPrivateKey || "";
+  const postQuantumSeed = pqSeed || "";
   const bundlerUrl = process.env.NEXT_PUBLIC_BUNDLER_URL || "";
   const accountAddress = process.env.AGENT_ADDRESS || "";
-
-  if (!preQuantumSeed || !postQuantumSeed) {
-    const [fromVaultAgent, fromVaultPQ] = await Promise.all([
-      !preQuantumSeed ? fetchVaultSecret("private-keys/agent") : Promise.resolve(null),
-      !postQuantumSeed ? fetchVaultSecret("private-keys/post-quantum-seed") : Promise.resolve(null),
-    ]);
-    if (fromVaultAgent) preQuantumSeed = fromVaultAgent;
-    if (fromVaultPQ) postQuantumSeed = fromVaultPQ;
-  }
+  console.log("[api/agent/buy] key source:", source);
 
   // Simulation mode when keys not configured
   if (!preQuantumSeed || !postQuantumSeed || !accountAddress) {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type AgentType = "consensus" | "specialist" | "librarian";
 type ServiceTier = "consensus" | "special" | "validation";
@@ -883,12 +884,16 @@ function saveToStorage(agents: Agent[]) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(agents)); } catch { /* ignore */ }
 }
 
-export default function MarketplacePage() {
+function MarketplaceInner() {
   const [registered, setRegistered] = useState<Agent[]>([]);
   const [showRegister, setShowRegister] = useState(false);
+  const searchParams = useSearchParams();
 
-  // Load persisted agents on mount
-  useEffect(() => { setRegistered(loadFromStorage()); }, []);
+  // Load persisted agents; auto-open register modal if ?register=1
+  useEffect(() => {
+    setRegistered(loadFromStorage());
+    if (searchParams.get("register") === "1") setShowRegister(true);
+  }, [searchParams]);
 
   function handleRegistered(agent: Agent) {
     setRegistered(prev => {
@@ -944,5 +949,13 @@ export default function MarketplacePage() {
         ))}
       </div>
     </div>
+  );
+}
+
+export default function MarketplacePage() {
+  return (
+    <Suspense fallback={null}>
+      <MarketplaceInner />
+    </Suspense>
   );
 }

@@ -55,7 +55,7 @@ export const NETWORKS: Record<NetworkKey, NetworkDefinition> = {
   sepolia: {
     key: "sepolia", chainId: 11155111, name: "Sepolia",
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-    rpcUrl: "https://rpc.sepolia.org", blockExplorerUrl: "https://sepolia.etherscan.io",
+    rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.sepolia.org", blockExplorerUrl: "https://sepolia.etherscan.io",
     tokens: [
       { symbol: "USDC", address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", decimals: 6 },
     ],

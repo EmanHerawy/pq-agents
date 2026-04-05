@@ -4,9 +4,14 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   streamText,
+  zodSchema,
   type ModelMessage,
   type UIMessage,
+  type ToolSet,
 } from "ai";
+import { tool } from "@ai-sdk/provider-utils";
+import { z } from "zod";
+import { resolveSigningKeys } from "@/lib/oneclaw-vault";
 
 const shroudBaseURL =
   process.env.SHROUD_BASE_URL || "https://shroud.1claw.xyz/v1";
@@ -37,9 +42,75 @@ const billingMode =
   (process.env.SHROUD_BILLING_MODE as "token_billing" | "provider_api_key") ||
   "token_billing";
 
-/** Gemini: call Google API directly when a key is available (Shroud /chat/completions → Gemini is broken). */
-const CHAT_SYSTEM =
-  "You are an onchain AI agent assistant. Help users interact with smart contracts and manage their wallets.";
+const agentAddress = process.env.AGENT_ADDRESS || "unknown";
+const agentName = process.env.AGENT_NAME || "Agent";
+const agentPersona = process.env.AGENT_PERSONA || "You are an autonomous onchain AI agent.";
+const agentSkills = process.env.AGENT_SKILLS ? "\nYour skills: " + process.env.AGENT_SKILLS + "." : "";
+
+const CHAT_SYSTEM = `${agentPersona}${agentSkills}
+
+Your on-chain identity:
+- Agent address (ECDSA wallet): ${agentAddress}
+- Smart account: post-quantum ERC-4337 (ML-DSA-44 + ECDSA hybrid, ZKNOX)
+- Name: ${agentName}
+
+You have the following tools available:
+- send_transaction: Send USDC to another agent or address using your PQ smart account. Keys are fetched securely from the 1claw vault — you never see the raw private key.
+- check_vault: Verify that your vault credentials are working and signing keys are accessible.
+
+When a user asks you to pay, buy, send, or transfer, use send_transaction. Always confirm the recipient and amount before sending. After sending, show the transaction hash.`;
+
+/** Tools the agent can call autonomously */
+const agentTools: ToolSet = {
+  send_transaction: tool({
+    description:
+      "Send USDC to a recipient using the agent's post-quantum ERC-4337 smart account. Keys are loaded from the 1claw vault — the agent never sees the raw private key.",
+    inputSchema: zodSchema(
+      z.object({
+        to: z.string().describe("Recipient Ethereum address (0x...)"),
+        amount: z.number().positive().describe("Amount in USDC (e.g. 10 for 10 USDC)"),
+        reason: z.string().optional().describe("Human-readable reason for this payment"),
+      }),
+    ),
+    execute: async ({ to, amount, reason }: { to: string; amount: number; reason?: string }) => {
+      try {
+        const res = await fetch(
+          (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000") + "/api/agent/buy",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ to, amount, agentId: "self", service: reason || "agent payment" }),
+          },
+        );
+        const data = (await res.json()) as { txHash?: string; simulated?: boolean; error?: string };
+        if (!res.ok || data.error) return { success: false, error: data.error || "Transaction failed" };
+        return {
+          success: true,
+          txHash: data.txHash,
+          simulated: data.simulated ?? false,
+          message: data.simulated ? "Simulated (no vault keys configured)" : `Sent! tx: ${data.txHash}`,
+        };
+      } catch (e) {
+        return { success: false, error: e instanceof Error ? e.message : String(e) };
+      }
+    },
+  }),
+
+  check_vault: tool({
+    description: "Check whether the 1claw vault is reachable and signing keys are accessible.",
+    inputSchema: zodSchema(z.object({})),
+    execute: async () => {
+      const { source, agentPrivateKey, postQuantumSeed } = await resolveSigningKeys();
+      return {
+        source,
+        hasEcdsaKey: !!agentPrivateKey,
+        hasPqSeed: !!postQuantumSeed,
+        vaultId: (process.env.ONECLAW_VAULT_ID || "").trim() || "not configured",
+        status: source === "none" ? "keys not found — check ONECLAW_VAULT_ID + credentials" : "ok",
+      };
+    },
+  }),
+};
 
 const STREAM_CHUNK =
   Math.max(8, Number(process.env.SHROUD_STREAM_CHUNK_CHARS || "40") || 40);
@@ -270,6 +341,7 @@ export async function POST(req: Request) {
       const result = streamText({
         model: google(geminiDirectModel),
         system: CHAT_SYSTEM,
+        tools: agentTools,
         messages: await convertToModelMessages(uiMessages),
         onError({ error }) {
           const msg = error instanceof Error ? error.message : String(error);

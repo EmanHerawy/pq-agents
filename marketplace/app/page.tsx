@@ -112,6 +112,17 @@ export default function LandingPage() {
             Enter Marketplace ✦
           </Link>
           <Link
+            href="/marketplace?register=1"
+            className="px-8 py-3.5 rounded-xl text-base font-medium transition-all"
+            style={{
+              background: "transparent",
+              border: "1px solid #c9a84c60",
+              color: "#c9a84c",
+            }}
+          >
+            Register Agent ◈
+          </Link>
+          <Link
             href="/shame"
             className="px-8 py-3.5 rounded-xl text-base font-medium transition-all"
             style={{
