@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type AgentType = "consensus" | "specialist" | "librarian";
 type ServiceTier = "consensus" | "special" | "validation";
@@ -619,16 +619,312 @@ function AgentCard({ agent }: { agent: Agent }) {
   );
 }
 
+// ─── Register Modal ────────────────────────────────────────────────────────────
+
+const SUPPORTED_CHAINS = [
+  { id: 5042002,  label: "ARC Testnet" },
+  { id: 84532,    label: "Base Sepolia" },
+  { id: 11155111, label: "Sepolia" },
+  { id: 8453,     label: "Base" },
+  { id: 480,      label: "World Chain" },
+];
+
+type VerifyResult = {
+  isContract: boolean;
+  isQuantumSafe: boolean;
+  isHumanBacked: boolean;
+  humanFoundOn: string | null;
+  eligible: boolean;
+};
+
+function RegisterModal({ onClose, onRegistered }: {
+  onClose: () => void;
+  onRegistered: (agent: Agent) => void;
+}) {
+  const [step, setStep] = useState<"form" | "verifying" | "result">("form");
+  const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  const [name, setName] = useState("");
+  const [ens, setEns] = useState("");
+  const [address, setAddress] = useState("");
+  const [chainId, setChainId] = useState(5042002);
+  const [bio, setBio] = useState("");
+  const [skills, setSkills] = useState("");
+  const [serviceName, setServiceName] = useState("");
+  const [servicePrice, setServicePrice] = useState("");
+  const [serviceDesc, setServiceDesc] = useState("");
+
+  async function handleVerifyAndRegister() {
+    if (!name.trim() || !address.trim()) return;
+    setStep("verifying");
+    setVerifyError(null);
+    try {
+      const res = await fetch(`/api/verify-agent?address=${encodeURIComponent(address.trim())}&chainId=${chainId}`);
+      const data: VerifyResult = await res.json();
+      setVerifyResult(data);
+      if (data.isQuantumSafe) {
+        const newAgent: Agent = {
+          id: "reg-" + Date.now(),
+          name: name.trim(),
+          ens: ens.trim() || address.trim().slice(0, 10) + "...",
+          address: address.trim(),
+          pqAccount: address.trim(),
+          skills: skills.split(",").map(s => s.trim()).filter(Boolean),
+          services: serviceName.trim()
+            ? [{
+                name: serviceName.trim(),
+                price: Number(servicePrice) || 10,
+                description: serviceDesc.trim() || "AI agent service",
+                tier: "validation" as ServiceTier,
+                ratingCriteria: ["Correctness", "Quality"],
+              }]
+            : [{ name: "General Service", price: 10, description: "AI agent service", tier: "validation" as ServiceTier, ratingCriteria: ["Correctness"] }],
+          isQuantumSafe: true,
+          bio: bio.trim() || "Community-registered quantum-safe agent.",
+        };
+        onRegistered(newAgent);
+      }
+      setStep("result");
+    } catch {
+      setVerifyError("Verification failed — check the address and network.");
+      setStep("form");
+    }
+  }
+
+  const inputStyle = {
+    background: "var(--bg-deep)",
+    border: "1px solid var(--border-2)",
+    color: "var(--text-1)",
+    borderRadius: "10px",
+    padding: "10px 14px",
+    fontSize: "14px",
+    outline: "none",
+    width: "100%",
+  };
+
+  const labelStyle = { fontSize: "11px", fontFamily: "monospace", color: "var(--text-4)", marginBottom: "6px", display: "block" as const };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "var(--overlay-heavy)", backdropFilter: "blur(10px)" }}>
+      <div className="w-full max-w-lg rounded-2xl overflow-hidden"
+        style={{ background: "var(--bg-card)", border: "1px solid #c9a84c50", maxHeight: "90vh", overflowY: "auto" }}>
+
+        {/* Header */}
+        <div className="px-6 py-5 flex items-start justify-between" style={{ borderBottom: "1px solid var(--border-1)", background: "var(--bg-deep)" }}>
+          <div>
+            <p className="text-xs font-mono mb-1" style={{ color: "#c9a84c" }}>◈ PQ AGENT REGISTRY</p>
+            <h3 className="text-2xl font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--text-1)" }}>
+              Register Agent
+            </h3>
+            <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>
+              Only ML-DSA-44 ERC-4337 accounts are accepted.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-xl mt-1" style={{ color: "#6a7080" }}>✕</button>
+        </div>
+
+        {/* Form */}
+        {step === "form" && (
+          <div className="px-6 py-5 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label style={labelStyle}>AGENT NAME *</label>
+                <input style={inputStyle} placeholder="QuantumBot-01" value={name} onChange={e => setName(e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStyle}>ENS / HANDLE</label>
+                <input style={inputStyle} placeholder="myagent.eth" value={ens} onChange={e => setEns(e.target.value)} />
+              </div>
+            </div>
+
+            <div>
+              <label style={labelStyle}>PQ ACCOUNT ADDRESS (ML-DSA-44 ERC-4337) *</label>
+              <input style={inputStyle} placeholder="0x..." value={address} onChange={e => setAddress(e.target.value)} />
+            </div>
+
+            <div>
+              <label style={labelStyle}>NETWORK</label>
+              <select
+                style={{ ...inputStyle, cursor: "pointer" }}
+                value={chainId}
+                onChange={e => setChainId(Number(e.target.value))}
+              >
+                {SUPPORTED_CHAINS.map(c => (
+                  <option key={c.id} value={c.id}>{c.label} ({c.id})</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={labelStyle}>BIO</label>
+              <textarea
+                style={{ ...inputStyle, resize: "vertical", minHeight: "72px" }}
+                placeholder="What does your agent do?"
+                value={bio}
+                onChange={e => setBio(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>SKILLS (comma-separated)</label>
+              <input style={inputStyle} placeholder="Trading, Research, DeFi" value={skills} onChange={e => setSkills(e.target.value)} />
+            </div>
+
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "var(--bg-deep)", border: "1px solid var(--border-2)" }}>
+              <p className="text-xs font-mono" style={{ color: "#c9a84c" }}>SERVICE OFFERED</p>
+              <input style={inputStyle} placeholder="Service name" value={serviceName} onChange={e => setServiceName(e.target.value)} />
+              <div className="grid grid-cols-2 gap-3">
+                <input style={inputStyle} placeholder="Price (USDC)" type="number" min="0" value={servicePrice} onChange={e => setServicePrice(e.target.value)} />
+                <input style={inputStyle} placeholder="Description" value={serviceDesc} onChange={e => setServiceDesc(e.target.value)} />
+              </div>
+            </div>
+
+            {verifyError && (
+              <div className="rounded-lg p-3 text-sm font-mono" style={{ background: "#ef44440f", border: "1px solid #ef444440", color: "#f87171" }}>
+                {verifyError}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm" style={{ background: "var(--border-3)", color: "var(--text-3)" }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleVerifyAndRegister}
+                disabled={!name.trim() || !address.trim()}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
+                style={{ background: "linear-gradient(135deg,#c9a84c,#7a6130)", color: "#05080f" }}
+              >
+                Verify & Register ◈
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Verifying */}
+        {step === "verifying" && (
+          <div className="px-6 py-16 flex flex-col items-center gap-5">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl" style={{ background: "#c9a84c12", border: "1px solid #c9a84c30", color: "#c9a84c" }}>
+              <Spinner />
+            </div>
+            <div className="text-center">
+              <p className="font-medium" style={{ color: "var(--text-1)" }}>Verifying on-chain...</p>
+              <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>Checking ML-DSA-44 + ERC-4337 + World ID</p>
+            </div>
+          </div>
+        )}
+
+        {/* Result */}
+        {step === "result" && verifyResult && (
+          <div className="px-6 py-6 space-y-4">
+            {/* Status checks */}
+            {[
+              { label: "Smart contract detected",       ok: verifyResult.isContract },
+              { label: "ERC-4337 + ML-DSA-44 verified", ok: verifyResult.isQuantumSafe },
+              { label: "Human-backed (World ID)",        ok: verifyResult.isHumanBacked, note: verifyResult.humanFoundOn ?? undefined },
+            ].map(({ label, ok, note }) => (
+              <div key={label} className="flex items-center gap-3">
+                <span className="text-lg" style={{ color: ok ? "#4ade80" : "#f87171" }}>
+                  {ok ? "◈" : "✕"}
+                </span>
+                <span className="text-sm" style={{ color: "var(--text-warm-2)" }}>{label}</span>
+                {note && <span className="text-xs font-mono ml-auto" style={{ color: "var(--text-4)" }}>{note}</span>}
+              </div>
+            ))}
+
+            <div className="h-px" style={{ background: "var(--border-2)" }} />
+
+            {verifyResult.isQuantumSafe ? (
+              <div className="rounded-xl p-4 text-center" style={{ background: "#22c55e0a", border: "1px solid #22c55e30" }}>
+                <p className="font-semibold" style={{ color: "#4ade80", fontFamily: "'Playfair Display', serif" }}>
+                  ◈ Agent registered!
+                </p>
+                <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>
+                  {verifyResult.isHumanBacked ? "Quantum-safe & human-backed." : "Quantum-safe. Human verification not found — listed without World ID badge."}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-xl p-4 text-center" style={{ background: "#ef44440a", border: "1px solid #ef444430" }}>
+                <p className="font-semibold" style={{ color: "#f87171", fontFamily: "'Playfair Display', serif" }}>
+                  ✕ Not quantum-safe
+                </p>
+                <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>
+                  This account does not use ML-DSA-44 + ERC-4337. Pre-quantum agents belong on the Wall of Shame.
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: "linear-gradient(135deg,#c9a84c,#7a6130)", color: "#05080f" }}
+            >
+              Done
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const LS_KEY = "pq_registered_agents";
+
+function loadFromStorage(): Agent[] {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? (JSON.parse(raw) as Agent[]) : [];
+  } catch { return []; }
+}
+
+function saveToStorage(agents: Agent[]) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(agents)); } catch { /* ignore */ }
+}
+
 export default function MarketplacePage() {
-  const safe = STATIC_AGENTS.filter(a => a.isQuantumSafe);
-  const flagged = STATIC_AGENTS.filter(a => !a.isQuantumSafe);
+  const [registered, setRegistered] = useState<Agent[]>([]);
+  const [showRegister, setShowRegister] = useState(false);
+
+  // Load persisted agents on mount
+  useEffect(() => { setRegistered(loadFromStorage()); }, []);
+
+  function handleRegistered(agent: Agent) {
+    setRegistered(prev => {
+      const next = [...prev, agent];
+      saveToStorage(next);
+      return next;
+    });
+    setShowRegister(false);
+  }
+
+  const allAgents = [...STATIC_AGENTS, ...registered];
+  const safe = allAgents.filter(a => a.isQuantumSafe);
+  const flagged = allAgents.filter(a => !a.isQuantumSafe);
 
   return (
     <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--text-1)" }}>
-          Agent Marketplace
-        </h1>
+      {showRegister && (
+        <RegisterModal onClose={() => setShowRegister(false)} onRegistered={handleRegistered} />
+      )}
+
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-4xl md:text-5xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--text-1)" }}>
+            Agent Marketplace
+          </h1>
+          <p className="text-sm mt-2" style={{ color: "var(--text-3)" }}>
+            Only post-quantum agents. ML-DSA-44 enforced on-chain.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowRegister(true)}
+          className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+          style={{ background: "linear-gradient(135deg,#c9a84c,#7a6130)", color: "#05080f", boxShadow: "0 4px 20px #c9a84c25" }}
+        >
+          ◈ Register Agent
+        </button>
       </div>
 
       <div className="flex items-center gap-4 mb-8">
@@ -643,7 +939,7 @@ export default function MarketplacePage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {STATIC_AGENTS.map((agent) => (
+        {allAgents.map((agent) => (
           <AgentCard key={agent.id} agent={agent} />
         ))}
       </div>

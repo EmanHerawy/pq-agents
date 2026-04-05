@@ -180,6 +180,72 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* Built on */}
+      <div className="border-t px-6 py-16 max-w-5xl mx-auto w-full" style={{ borderColor: "var(--border-1)" }}>
+        <p className="text-xs font-mono mb-10 text-center" style={{ color: "var(--text-4)" }}>BUILT ON THE SHOULDERS OF GIANTS</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+          {/* 1claw */}
+          <div
+            className="rounded-xl p-6 flex flex-col gap-3"
+            style={{ background: "var(--bg-card)", border: "1px solid #c9a84c30" }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl" style={{ color: "#c9a84c" }}>⬗</span>
+              <span className="text-lg font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--text-1)" }}>
+                1claw
+              </span>
+              <span className="text-xs font-mono px-2 py-0.5 rounded-full" style={{ background: "#c9a84c15", color: "#c9a84c", border: "1px solid #c9a84c30" }}>
+                1claw.xyz
+              </span>
+            </div>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--text-3)" }}>
+              Agent secrets vault and Shroud LLM proxy — providing privacy-preserving AI inference
+              so agents can think without exposing their API keys or conversation history on-chain.
+            </p>
+            <p className="text-xs font-mono" style={{ color: "#c9a84c80" }}>
+              ✦ &nbsp; vault · shroud · agent identity
+            </p>
+          </div>
+
+          {/* ZKNOX */}
+          <div
+            className="rounded-xl p-6 flex flex-col gap-3"
+            style={{ background: "var(--bg-card)", border: "1px solid #4ade8030" }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl" style={{ color: "#4ade80" }}>◈</span>
+              <span className="text-lg font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "var(--text-1)" }}>
+                ZKNOX
+              </span>
+              <span className="text-xs font-mono px-2 py-0.5 rounded-full" style={{ background: "#4ade8015", color: "#4ade80", border: "1px solid #4ade8030" }}>
+                zknox.com
+              </span>
+            </div>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--text-3)" }}>
+              ML-DSA-44 (NIST FIPS 204) ERC-4337 smart account infrastructure — making post-quantum
+              key ownership a first-class primitive on EVM chains.
+            </p>
+            <p className="text-xs font-mono" style={{ color: "#4ade8080" }}>
+              ◈ &nbsp; ML-DSA-44 · hybrid signing · ERC-4337
+            </p>
+          </div>
+        </div>
+
+        {/* Thank you note */}
+        <div
+          className="rounded-xl px-8 py-6 text-center"
+          style={{ background: "linear-gradient(135deg, #c9a84c08, #c9a84c03)", border: "1px solid #c9a84c20" }}
+        >
+          <p className="text-base mb-2" style={{ fontFamily: "'Playfair Display', serif", color: "var(--text-2)" }}>
+            A sincere thank you to the teams at <span style={{ color: "#c9a84c" }}>1claw</span> and <span style={{ color: "#4ade80" }}>ZKNOX</span>
+          </p>
+          <p className="text-sm" style={{ color: "var(--text-4)" }}>
+            for building the open infrastructure that made this project possible — and for pushing the frontier
+            of post-quantum security on EVM chains during ETHGlobal Cannes 2026.
+          </p>
+        </div>
+      </div>
+
       {/* Bottom CTA strip */}
       <div
         className="border-t px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4"

@@ -65,8 +65,8 @@ export function NavLinks() {
       <Link href="/marketplace" style={linkStyle("/marketplace")}>
         Marketplace
       </Link>
-      <Link href="/shame" style={linkStyle("/shame")}>
-        Wall of Shame
+      <Link href="/fame" style={linkStyle("/fame")}>
+        Wall of Fame
       </Link>
       <Link
         href="/my-agent"
