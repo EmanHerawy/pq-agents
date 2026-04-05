@@ -1,4 +1,52 @@
 {
+  "arcTestnet": {
+    "chainId": 5042002,
+    "verifiers": {
+      "ecdsa_k1": {
+        "address": "0x928C9C59fEF71325f3b7D1252ED6120DbcbDC098",
+        "salt": "0x89249991e6619ea9d2a750423497a83ec82f475538ff555d1ad42473e0db9fe6",
+        "saltLabel": "ZKNOX_ECDSA_K1_VERIFIER_V0_0_1"
+      },
+      "ethfalcon": {
+        "address": "0x49b5087D9866b3035b1462330e6ee28E8e5CbfE1",
+        "salt": "0xd3caa9d5a653e823eba7d447db9b35c6abc2b03dd25729b41d63040498d76b37",
+        "saltLabel": "ZKNOX_ETHFALCON_VERIFIER_V0_0_2"
+      },
+      "mldsaeth": {
+        "address": "0xBde18063BFf514096a69696fA72b5C3b7a2404Ab",
+        "salt": "0xef5ad2b0c75bd3771cf2fe3ddf20939b42e12eaa64b1edea5bcf3eebc798bb48",
+        "saltLabel": "ZKNOX_MLDSAETH_VERIFIER_V0_0_3"
+      },
+      "mldsa": {
+        "address": "0x4FdAbB80731A3b8dFE08fd511Db69352c64Adc51",
+        "salt": "0x3abe967beef14329ce9362754f283512b172924e0c4c1cd9e92b45c9255c1cde",
+        "saltLabel": "ZKNOX_MLDSA_VERIFIER_V0_0_10"
+      }
+    },
+    "accounts": {
+      "ethfalcon_k1_agent": {
+        "address": "0x71A2ff2Ca7E1D32Ec605494d0D98B05B8cb15346",
+        "postQuantum": "ethfalcon",
+        "preQuantum": "ecdsa_k1",
+        "salt": "0x952ff768ee19017e3a39a8a3839b2147a3577eeab5ff0201fb60a185aa1b524e",
+        "saltLabel": "PQ_AGENTS_ETHFALCON_K1_FACTORY_V0_0_1"
+      },
+      "mldsaeth_k1_agent": {
+        "address": "0x38093ee621fE8857a882292a9FBceaDF0F798719",
+        "postQuantum": "mldsaeth",
+        "preQuantum": "ecdsa_k1",
+        "salt": "0x03130e8150625897cf61811a428a4ec2cf37bbc20892516a1824e020158991de",
+        "saltLabel": "PQ_AGENTS_MLDSAETH_K1_FACTORY_V0_0_1"
+      },
+      "mldsa_k1_agent": {
+        "address": "0xE6388d202979da19fC5Db7cC87e925228951fB36",
+        "postQuantum": "mldsa",
+        "preQuantum": "ecdsa_k1",
+        "salt": "0x92003daa2ca4f10be3c0fb916f2ecac5628b0a6a21501705b06f09b7559d91d2",
+        "saltLabel": "PQ_AGENTS_MLDSA_K1_FACTORY_V0_0_1"
+      }
+    }
+  },
   "sepolia": {
     "chainId": 11155111,
     "verifiers": {
@@ -200,6 +248,16 @@
         "address": "0x9A8bD1cA6533E367CEA77f16eb116ed9A55029F2",
         "salt": "0xdc085b57b8c806ccd375330541298fa60f650217581817d53f019e1a76171c27",
         "saltLabel": "ZKNOX_FALCON_VERIFIER_V0_0_4"
+      },
+      "ethfalcon": {
+        "address": "0x49b5087D9866b3035b1462330e6ee28E8e5CbfE1",
+        "salt": "0xd3caa9d5a653e823eba7d447db9b35c6abc2b03dd25729b41d63040498d76b37",
+        "saltLabel": "ZKNOX_ETHFALCON_VERIFIER_V0_0_2"
+      },
+      "mldsaeth": {
+        "address": "0xBde18063BFf514096a69696fA72b5C3b7a2404Ab",
+        "salt": "0xef5ad2b0c75bd3771cf2fe3ddf20939b42e12eaa64b1edea5bcf3eebc798bb48",
+        "saltLabel": "ZKNOX_MLDSAETH_VERIFIER_V0_0_3"
       }
     },
     "accounts": {
@@ -216,6 +274,27 @@
         "preQuantum": "ecdsa_k1",
         "salt": "0xbdae708545ad061f57152bf5f6c368f4f682d16a6080a3c656fd4f05b6d807ac",
         "saltLabel": "ZKNOX_FALCON_K1_FACTORY_V0_0_4"
+      },
+      "ethfalcon_k1_agent": {
+        "address": "0x979b105e7B819f4D5Ec5562E23A0Fe20b984b58B",
+        "postQuantum": "ethfalcon",
+        "preQuantum": "ecdsa_k1",
+        "salt": "0x952ff768ee19017e3a39a8a3839b2147a3577eeab5ff0201fb60a185aa1b524e",
+        "saltLabel": "PQ_AGENTS_ETHFALCON_K1_FACTORY_V0_0_1"
+      },
+      "mldsaeth_k1_agent": {
+        "address": "0xBE8BED238f45613CF5e0b917de19978973eb46b5",
+        "postQuantum": "mldsaeth",
+        "preQuantum": "ecdsa_k1",
+        "salt": "0x03130e8150625897cf61811a428a4ec2cf37bbc20892516a1824e020158991de",
+        "saltLabel": "PQ_AGENTS_MLDSAETH_K1_FACTORY_V0_0_1"
+      },
+      "mldsa_k1_agent": {
+        "address": "0x4834c1D95DC8cE8c40D611Ae7576891368811589",
+        "postQuantum": "mldsa",
+        "preQuantum": "ecdsa_k1",
+        "salt": "0x92003daa2ca4f10be3c0fb916f2ecac5628b0a6a21501705b06f09b7559d91d2",
+        "saltLabel": "PQ_AGENTS_MLDSA_K1_FACTORY_V0_0_1"
       }
     }
   }

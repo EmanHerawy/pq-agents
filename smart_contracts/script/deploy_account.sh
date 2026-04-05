@@ -8,6 +8,8 @@
 #
 # Optional env vars (agent account only):
 #   MAX_ETH_PER_TX        — max ETH per tx in wei (default 0 = unlimited)
+#   MAX_USDC_PER_TX       — max USDC per tx in 6-decimal units (default 0 = unlimited)
+#   USDC_ADDRESS          — USDC token contract address (default address(0))
 #
 # Args:
 #   $1  Private key  (or set PRIVATE_KEY env var)
@@ -15,7 +17,7 @@
 #
 # Examples:
 #   ./deploy_account.sh $PK base
-#   MAX_ETH_PER_TX=500000000000000000 ./deploy_account.sh $PK agent
+#   MAX_ETH_PER_TX=500000000000000000 MAX_USDC_PER_TX=100000000 USDC_ADDRESS=0x... ./deploy_account.sh $PK agent
 #   RPC_URL=https://rpc.testnet.arc.network ./deploy_account.sh $PK agent
 
 set -e
@@ -40,7 +42,10 @@ fi
 case "$ACCOUNT_TYPE" in
   agent)
     TC="CreateAgentAccount"
-    echo "Account type: agent (max ETH/tx: ${MAX_ETH_PER_TX:-0 (unlimited)})"
+    echo "Account type  : agent"
+    echo "Max ETH/tx    : ${MAX_ETH_PER_TX:-0 (unlimited)}"
+    echo "Max USDC/tx   : ${MAX_USDC_PER_TX:-0 (unlimited)}"
+    echo "USDC address  : ${USDC_ADDRESS:-0x0000000000000000000000000000000000000000}"
     ;;
   *)
     TC="CreateBaseAccount"
