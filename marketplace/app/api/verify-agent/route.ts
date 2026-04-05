@@ -60,13 +60,8 @@ function decodeAddress(hex: string): string {
   return "0x" + raw.slice(-40);
 }
 
-/** lookupHuman(address) — AgentBook ABI selector */
-const LOOKUP_HUMAN_SELECTOR = "0x" + Buffer.from("lookupHuman(address)").reduce((acc, b, i, arr) => {
-  // keccak4 of "lookupHuman(address)" = 0x7a2b...
-  // Pre-computed: 0x7a2b6acd
-  return acc;
-}, "");
-const LOOKUP_HUMAN = "0x7a2b6acd";
+/** lookupHuman(address) — keccak256("lookupHuman(address)")[0:4] = 0x451a02f4 */
+const LOOKUP_HUMAN = "0x451a02f4";
 
 const ZERO_BYTES32 = "0".repeat(64);
 

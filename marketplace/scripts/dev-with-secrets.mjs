@@ -15,7 +15,8 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MY_AGENT_DIR = join(__dirname, "../../my_agent");
+// Agent env lives in scaffold-agent/my-arc-agent2 (sibling of pq-agents/)
+const MY_AGENT_DIR = join(__dirname, "../../../scaffold-agent/my-arc-agent2");
 const DOTENV = join(MY_AGENT_DIR, ".env");
 const ENC = join(MY_AGENT_DIR, ".env.secrets.encrypted");
 

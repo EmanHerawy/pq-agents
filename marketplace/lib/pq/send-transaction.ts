@@ -47,6 +47,7 @@ export const sendERC4337Transaction = async (
     const { secretKey } = ml_dsa44.keygen(hexToU8(postQuantumSeed, 32));
 
     let userOp = await createBaseUserOperation(accountAddress, targetAddress, value, callData, provider, bundlerUrl);
+    log("Nonce: " + userOp.nonce.toString());
 
     if (!bundlerUrl || bundlerUrl.trim() === "") {
       userOp.signature = await signUserOpHybrid(userOp, ENTRY_POINT_ADDRESS, network.chainId, preQuantumSeed, secretKey);

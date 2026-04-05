@@ -146,10 +146,53 @@ function shroudConfigError(message: string) {
   });
 }
 
-function validateShroudEnv():
+/**
+ * If ONECLAW_AGENT_ID is empty but ONECLAW_API_KEY is present, fetch the first
+ * agent UUID from the 1claw API and cache it in process.env for subsequent requests.
+ */
+async function resolveAgentId(): Promise<string> {
+  const explicit = normalizeOneclawEnvValue(process.env.ONECLAW_AGENT_ID);
+  if (explicit) return explicit;
+
+  const masterKey = normalizeOneclawEnvValue(process.env.ONECLAW_API_KEY);
+  if (!masterKey) return "";
+
+  try {
+    const base = (process.env.ONECLAW_API_BASE_URL || "https://api.1claw.xyz").replace(/\/$/, "");
+    // Get a short-lived token from the master API key
+    const tokenRes = await fetch(base + "/v1/auth/api-key-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ api_key: masterKey }),
+    });
+    if (!tokenRes.ok) return "";
+    const { access_token: token } = await tokenRes.json() as { access_token: string };
+
+    // List agents and take the first UUID
+    const agentsRes = await fetch(base + "/v1/agents", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!agentsRes.ok) return "";
+    const data = await agentsRes.json() as { agents?: Array<{ id: string }> } | Array<{ id: string }>;
+    const list = Array.isArray(data) ? data : (data.agents ?? []);
+    const id = list[0]?.id ?? "";
+    if (id && ONECLAW_UUID_RE.test(id)) {
+      // Cache so the next request doesn't re-fetch
+      process.env.ONECLAW_AGENT_ID = id;
+      console.log("[api/chat] resolved ONECLAW_AGENT_ID from master key:", id);
+    }
+    return id;
+  } catch (e) {
+    console.error("[api/chat] failed to auto-resolve ONECLAW_AGENT_ID:", e);
+    return "";
+  }
+}
+
+async function validateShroudEnv(): Promise<
   | { ok: true; agentId: string; agentKey: string }
-  | { ok: false; response: Response } {
-  const agentId = normalizeOneclawEnvValue(process.env.ONECLAW_AGENT_ID);
+  | { ok: false; response: Response }
+> {
+  const agentId = await resolveAgentId();
   const agentKey = normalizeOneclawEnvValue(process.env.ONECLAW_AGENT_API_KEY);
 
   if (!agentId || !agentKey) {
@@ -326,7 +369,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const creds = validateShroudEnv();
+  const creds = await validateShroudEnv();
   if (!creds.ok) return creds.response;
   const { agentId, agentKey } = creds;
 

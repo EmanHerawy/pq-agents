@@ -46,8 +46,10 @@ export const createBaseUserOperation = async (
   bundlerUrl: string
 ): Promise<UserOperation> => {
   const account = new ethers.Contract(accountAddress, ACCOUNT_ABI, provider);
+  // ZKNOX accounts expose getNonce() which wraps the EntryPoint nonce — use it directly (matches scaffold)
   let nonce: bigint;
   try { nonce = await account.getNonce(); } catch { nonce = 0n; }
+  console.log("[user-operation] nonce:", nonce.toString());
 
   const executeCallData = account.interface.encodeFunctionData("execute", [targetAddress, value, callData]);
 
@@ -112,12 +114,13 @@ export const estimateUserOperationGas = async (
   userOp: UserOperation,
   bundlerUrl: string
 ): Promise<GasEstimates> => {
+  const epAddr = ENTRY_POINT_ADDRESS;
   const MIN_VERIFICATION = 13_500_000n;
   try {
     const response = await fetch(bundlerUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_estimateUserOperationGas", params: [userOpToBundlerFormat(userOp), ENTRY_POINT_ADDRESS] }),
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_estimateUserOperationGas", params: [userOpToBundlerFormat(userOp), epAddr] }),
     });
     const result = await response.json();
     if (result.error) throw new Error(result.error.message || "Estimation failed");
@@ -167,15 +170,16 @@ export const signUserOpHybrid = async (
   const hash = getUserOpHash(userOp, entryPointAddress, chainId);
   const preQuantumSig = new ethers.Wallet(preQuantumPrivateKey).signingKey.sign(hash).serialized;
   // ml_dsa44.sign(msg, secretKey) — msg first, secretKey second
-  const postQuantumSig = ethers.hexlify(ml_dsa44.sign(ethers.getBytes(hash), postQuantumSecretKey));
+  const postQuantumSig = ethers.hexlify(ml_dsa44.sign(postQuantumSecretKey, ethers.getBytes(hash)));
   return ethers.AbiCoder.defaultAbiCoder().encode(["bytes", "bytes"], [preQuantumSig, postQuantumSig]);
 };
 
 export const submitUserOperation = async (userOp: UserOperation, bundlerUrl: string): Promise<string> => {
+  const epAddr = ENTRY_POINT_ADDRESS;
   const response = await fetch(bundlerUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_sendUserOperation", params: [userOpToBundlerFormat(userOp), ENTRY_POINT_ADDRESS] }),
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_sendUserOperation", params: [userOpToBundlerFormat(userOp), epAddr] }),
   });
   const result = await response.json();
   if (result.error) throw new Error("Bundler error: " + (result.error.message || "Unknown"));

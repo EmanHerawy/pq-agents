@@ -139,6 +139,7 @@ const NETWORKS: Record<string, { chainId: number; name: string; rpcUrl: string; 
   polygon:    { chainId: 137,      name: "Polygon",      rpcUrl: "https://polygon-rpc.com",         blockExplorerUrl: "https://polygonscan.com" },
   bnb:        { chainId: 56,       name: "BNB Chain",    rpcUrl: "https://bsc-dataseed.binance.org",blockExplorerUrl: "https://bscscan.com" },
   localhost:  { chainId: 31337,    name: "Localhost",    rpcUrl: "http://127.0.0.1:8545",           blockExplorerUrl: "http://localhost:8545" },
+  arc:        { chainId: 5042002,  name: "ARC Testnet",  rpcUrl: process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network", blockExplorerUrl: "https://explorer.testnet.arc.network" },
 };
 
 function getRpcUrl(networkKey?: string): string {
@@ -279,7 +280,7 @@ function getUserOpHash(userOp: UserOperation, entryPointAddress: string, chainId
 async function signUserOpHybrid(userOp: UserOperation, chainId: bigint, preQuantumPrivateKey: string, postQuantumSecretKey: Uint8Array): Promise<string> {
   const hash = getUserOpHash(userOp, ENTRY_POINT_ADDRESS, chainId);
   const preQuantumSig = new ethers.Wallet(preQuantumPrivateKey).signingKey.sign(hash).serialized;
-  const postQuantumSig = ethers.hexlify(ml_dsa44.sign(postQuantumSecretKey, ethers.getBytes(hash)));
+  const postQuantumSig = ethers.hexlify(ml_dsa44.sign(ethers.getBytes(hash), postQuantumSecretKey));
   return ethers.AbiCoder.defaultAbiCoder().encode(["bytes", "bytes"], [preQuantumSig, postQuantumSig]);
 }
 

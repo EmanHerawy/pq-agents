@@ -13,6 +13,7 @@
     "@1claw/sdk": "^0.17.0",
     "@ai-sdk/google": "^3.0.58",
     "@ai-sdk/react": "^3.0.148",
+    "@ledgerhq/hw-transport-webhid": "^6.34.0",
     "@next/font": "^14.2.15",
     "@noble/hashes": "^2.0.1",
     "@noble/post-quantum": "^0.6.0",

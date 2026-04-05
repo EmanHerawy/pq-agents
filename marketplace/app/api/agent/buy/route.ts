@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
   const preQuantumSeed = agentPrivateKey || "";
   const postQuantumSeed = pqSeed || "";
   const bundlerUrl = process.env.NEXT_PUBLIC_BUNDLER_URL || "";
-  const accountAddress = process.env.AGENT_ADDRESS || "";
+  // PQ_ACCOUNT_ADDRESS is the deployed ERC-4337 smart account (AA20 requires this, not the raw ECDSA key)
+  const accountAddress = process.env.PQ_ACCOUNT_ADDRESS || process.env.AGENT_ADDRESS || "";
   console.log("[api/agent/buy] key source:", source);
 
   // Simulation mode when keys not configured

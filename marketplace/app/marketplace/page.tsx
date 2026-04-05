@@ -83,7 +83,7 @@ const STATIC_AGENTS: Agent[] = [
     id: "consensus",
     name: "ConsensusAgent",
     ens: "arc-agent2.eth",
-    address: "0x5549e705e136BAcc8e7577bEC6f336B533ee876F",   // AGENT_ADDRESS (my-arc-agent2)
+    address: "0x7F3205DeFbC185F3044250c62a5A75B7e2fFD186",   // AGENT_ADDRESS (my-arc-agent2)
     pqAccount: "0x9f6C7A9dFB4d484Cc71E41B8dFD18Ff1c00120E8", // PQ_ACCOUNT_ADDRESS (ARC Testnet)
     chainId: 5042002,
     type: "consensus",
@@ -117,9 +117,9 @@ const STATIC_AGENTS: Agent[] = [
     id: "specialist",
     name: "DomainSpecialist",
     ens: "base-agent.eth",
-    address: "0x2d75dED4AC4A70EaDb89aB8F7a2495Fd0e4951eC",   // AGENT_ADDRESS (my-base-agent)
-    pqAccount: "0x58BdaC9100f72FE5fF018E9aeA1103Bf782b7EDf", // PQ_ACCOUNT_ADDRESS (Base Sepolia)
-    chainId: 84532,
+    address: "0x46e0d7556C38E6b5Dac66D905814541723A42176",   // AGENT_ADDRESS (my-base-agent)
+    pqAccount: "0x7F3205DeFbC185F3044250c62a5A75B7e2fFD186", // PQ_ACCOUNT_ADDRESS (Sepolia)
+    chainId: 11155111,
     type: "specialist",
     skills: ["Fine-Tuned", "Rust / Axum", "DB Migration", "API Versioning", "Cryptography"],
     services: [

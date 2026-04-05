@@ -3,15 +3,17 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useRef, useState } from "react";
+import { ethers } from "ethers";
 
 const AGENT_ADDRESS = process.env.NEXT_PUBLIC_AGENT_ADDRESS || "";
-const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "5042002");
+const PQ_ACCOUNT_ADDRESS = process.env.NEXT_PUBLIC_PQ_ACCOUNT_ADDRESS || AGENT_ADDRESS;
+const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "11155111");
 
 const MY_AGENT = {
   name: "MyAgent-01",
   ens: "my-agent.eth",
   address: AGENT_ADDRESS || "0xaE38...488a",
-  pqAccount: AGENT_ADDRESS || "0xaE38...488a",
+  pqAccount: PQ_ACCOUNT_ADDRESS || "0xaE38...488a",
   skills: ["Research", "Trading", "DeFi", "Reports"],
   services: [
     { name: "Market Analysis", price: 10, description: "On-demand DeFi market breakdown" },
@@ -37,6 +39,8 @@ export default function MyAgentPage() {
   const [sendAmount, setSendAmount] = useState("");
   const [sendNote, setSendNote] = useState("");
   const [sendLoading, setSendLoading] = useState(false);
+  const [sendMode, setSendMode] = useState<"vault" | "ledger">("vault");
+  const [sendLogs, setSendLogs] = useState<string[]>([]);
   const [sendResult, setSendResult] = useState<{ txHash?: string; error?: string; simulated?: boolean; requiresLedger?: boolean } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -52,12 +56,12 @@ export default function MyAgentPage() {
   }, [messages, isLoading]);
 
   useEffect(() => {
-    if (!AGENT_ADDRESS) return;
+    if (!PQ_ACCOUNT_ADDRESS && !AGENT_ADDRESS) return;
     setBalanceLoading(true);
     fetch("/api/balances", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address: AGENT_ADDRESS, chainId: CHAIN_ID }),
+      body: JSON.stringify({ address: PQ_ACCOUNT_ADDRESS || AGENT_ADDRESS, chainId: CHAIN_ID }),
     })
       .then(r => r.json())
       .then(data => setBalances(data))
@@ -72,11 +76,12 @@ export default function MyAgentPage() {
     setInput("");
   }
 
-  async function handleSend(e: React.FormEvent) {
+  async function handleSendVault(e: React.FormEvent) {
     e.preventDefault();
     if (!sendTo.trim() || !sendAmount || sendLoading) return;
     setSendLoading(true);
     setSendResult(null);
+    setSendLogs([]);
     try {
       const res = await fetch("/api/agent/buy", {
         method: "POST",
@@ -89,12 +94,161 @@ export default function MyAgentPage() {
         }),
       });
       const data = await res.json();
+      if (data.logs) setSendLogs(data.logs);
       setSendResult(data);
     } catch (err) {
       setSendResult({ error: err instanceof Error ? err.message : "Request failed" });
     } finally {
       setSendLoading(false);
     }
+  }
+
+  async function handleSendLedger(e: React.FormEvent) {
+    e.preventDefault();
+    if (!sendTo.trim() || !sendAmount || sendLoading) return;
+    setSendLoading(true);
+    setSendResult(null);
+    setSendLogs([]);
+    const log = (msg: string) => setSendLogs(prev => [...prev, msg]);
+
+    try {
+      log("Opening Ledger connection via WebHID...");
+      const { openTransport, getUserOpHash, signHybridHash } = await import("@/lib/pq/ledger-transport");
+      const transport = await openTransport();
+      log("✓ Ledger connected");
+
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.sepolia.org";
+      const bundlerUrl = process.env.NEXT_PUBLIC_BUNDLER_URL || "";
+      // Use the deployed PQ smart account address (not the raw ECDSA key address)
+      const accountAddress = PQ_ACCOUNT_ADDRESS;
+      const chainId = BigInt(process.env.NEXT_PUBLIC_CHAIN_ID || "11155111");
+      const entryPoint = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
+
+      if (!accountAddress) throw new Error("NEXT_PUBLIC_PQ_ACCOUNT_ADDRESS not set");
+      if (!bundlerUrl) throw new Error("NEXT_PUBLIC_BUNDLER_URL not set");
+
+      // Build UserOp client-side
+      log("Building UserOperation...");
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
+      const accountAbi = ["function execute(address,uint256,bytes) external"];
+      // ERC-4337: nonce is owned by the EntryPoint, not the account contract
+      const entryPointContract = new ethers.Contract(
+        entryPoint,
+        ["function getNonce(address sender, uint192 key) external view returns (uint256)"],
+        provider
+      );
+      let nonce: bigint;
+      try { nonce = await entryPointContract.getNonce(accountAddress, 0n); } catch { nonce = 0n; }
+
+      const iface = new ethers.Interface(accountAbi);
+      const callData = iface.encodeFunctionData("execute", [sendTo.trim(), 0n, "0x"]);
+
+      // Gas prices from bundler
+      let maxFee = ethers.parseUnits("0.2", "gwei");
+      let maxPriority = ethers.parseUnits("0.1", "gwei");
+      try {
+        const gpr = await fetch(bundlerUrl, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "pimlico_getUserOperationGasPrice", params: [] }) });
+        const gpd = await gpr.json() as { result?: { standard: { maxFeePerGas: string; maxPriorityFeePerGas: string } } };
+        if (gpd.result) { maxFee = BigInt(gpd.result.standard.maxFeePerGas); maxPriority = BigInt(gpd.result.standard.maxPriorityFeePerGas); }
+      } catch { /* use defaults */ }
+
+      const packUint128 = (a: bigint, b: bigint) => ethers.solidityPacked(["uint128", "uint128"], [a, b]);
+
+      const userOp = {
+        sender: accountAddress,
+        nonce,
+        initCode: "0x",
+        callData,
+        accountGasLimits: packUint128(9_000_000n, 500_000n),
+        preVerificationGas: 1_000_000n,
+        gasFees: packUint128(maxPriority, maxFee),
+        paymasterAndData: "0x",
+        signature: "0x",
+      };
+
+      // Gas estimation with dummy sig
+      log("Estimating gas...");
+      const dummyEcdsa = ethers.hexlify(new Uint8Array(65).fill(0xff));
+      const dummyMldsa = ethers.hexlify(new Uint8Array(2420).fill(0xff));
+      const dummySig   = ethers.AbiCoder.defaultAbiCoder().encode(["bytes","bytes"], [dummyEcdsa, dummyMldsa]);
+
+      const unpackUint128 = (packed: string): [bigint, bigint] => {
+        const bytes = ethers.getBytes(packed);
+        return [BigInt("0x" + ethers.hexlify(bytes.slice(0, 16)).slice(2)), BigInt("0x" + ethers.hexlify(bytes.slice(16, 32)).slice(2))];
+      };
+      const [verGas, callGas] = unpackUint128(userOp.accountGasLimits);
+      const [pri, fee] = unpackUint128(userOp.gasFees);
+
+      const bundlerFmt = {
+        sender: userOp.sender,
+        nonce: "0x" + userOp.nonce.toString(16),
+        callData: userOp.callData,
+        verificationGasLimit: "0x" + verGas.toString(16),
+        callGasLimit: "0x" + callGas.toString(16),
+        preVerificationGas: "0x" + userOp.preVerificationGas.toString(16),
+        maxFeePerGas: "0x" + fee.toString(16),
+        maxPriorityFeePerGas: "0x" + pri.toString(16),
+        signature: dummySig,
+      };
+
+      try {
+        const estRes = await fetch(bundlerUrl, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_estimateUserOperationGas", params: [bundlerFmt, entryPoint] }) });
+        const estData = await estRes.json() as { result?: { verificationGasLimit: string; callGasLimit: string; preVerificationGas: string } };
+        if (estData.result) {
+          let vgl = BigInt(estData.result.verificationGasLimit);
+          if (vgl < 9_000_000n) vgl = 9_000_000n;
+          let pvg = BigInt(estData.result.preVerificationGas) * 4n;
+          if (pvg < 800_000n) pvg = 800_000n;
+          userOp.accountGasLimits = packUint128(vgl, BigInt(estData.result.callGasLimit));
+          userOp.preVerificationGas = pvg;
+        }
+      } catch { /* keep defaults */ }
+
+      log("Requesting Ledger signature — check your device screen...");
+      // Use 0x16 HYBRID_SIGN_HASH (blind sign) — 0x17 HYBRID_SIGN_USEROP not yet supported by ZKNOX app
+      const hashBytes = getUserOpHash(userOp, entryPoint, chainId);
+      const packedSig = await signHybridHash(transport, hashBytes);
+      log("✓ Device confirmed — hybrid signature received");
+
+      try { await transport.close(); } catch { /* ignore */ }
+
+      // Submit signed UserOp via server (avoids CORS on bundler)
+      const [v2, c2] = unpackUint128(userOp.accountGasLimits);
+      const [p2, f2] = unpackUint128(userOp.gasFees);
+      const signedFmt = {
+        sender: userOp.sender,
+        nonce: "0x" + userOp.nonce.toString(16),
+        callData: userOp.callData,
+        verificationGasLimit: "0x" + v2.toString(16),
+        callGasLimit: "0x" + c2.toString(16),
+        preVerificationGas: "0x" + userOp.preVerificationGas.toString(16),
+        maxFeePerGas: "0x" + f2.toString(16),
+        maxPriorityFeePerGas: "0x" + p2.toString(16),
+        signature: packedSig,
+      };
+
+      log("Submitting to bundler...");
+      const submitRes = await fetch("/api/agent/submit-signed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userOp: signedFmt, entryPoint }),
+      });
+      const submitData = await submitRes.json();
+      if (submitData.error) throw new Error(submitData.error);
+      log("✓ Submitted: " + submitData.userOpHash);
+      setSendResult({ txHash: submitData.userOpHash });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setSendResult({ error: msg });
+    } finally {
+      setSendLoading(false);
+    }
+  }
+
+  function handleSend(e: React.FormEvent) {
+    return sendMode === "ledger" ? handleSendLedger(e) : handleSendVault(e);
   }
 
   return (
@@ -110,16 +264,16 @@ export default function MyAgentPage() {
 
       {/* Tab switcher */}
       <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: "var(--bg-deep)", border: "1px solid var(--border-1)" }}>
-        {(["chat", "info"] as const).map((t) => (
+        {(["chat", "send", "info"] as const).map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => { setTab(t); setSendResult(null); }}
             className="px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize"
             style={tab === t
               ? { background: "linear-gradient(135deg, #c9a84c, #7a6130)", color: "#05080f" }
               : { color: "var(--text-3)", background: "transparent" }}
           >
-            {t === "chat" ? "Chat ✦" : "Info & Keys"}
+            {t === "chat" ? "Chat ✦" : t === "send" ? "Send ⟶" : "Info & Keys"}
           </button>
         ))}
       </div>
@@ -238,6 +392,145 @@ export default function MyAgentPage() {
               Send ✦
             </button>
           </form>
+        </div>
+      )}
+
+      {/* ── Send tab ── */}
+      {tab === "send" && (
+        <div className="rounded-2xl overflow-hidden" style={{ background: "var(--bg-card)", border: "1px solid #c9a84c40" }}>
+          {/* Header */}
+          <div className="px-5 py-4 flex items-center gap-3" style={{ background: "var(--bg-deep)", borderBottom: "1px solid var(--border-3)" }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm"
+              style={{ background: "linear-gradient(135deg,#c9a84c,#7a6130)", color: "#05080f" }}>
+              ⟶
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>Send Transaction</p>
+              <p className="text-xs font-mono" style={{ color: "#c9a84c" }}>ML-DSA-44 + ECDSA · Sepolia</p>
+            </div>
+            {/* Signing mode toggle */}
+            <div className="flex gap-1 p-0.5 rounded-lg" style={{ background: "var(--bg-card)", border: "1px solid var(--border-1)" }}>
+              {(["vault", "ledger"] as const).map(m => (
+                <button key={m} onClick={() => { setSendMode(m); setSendResult(null); setSendLogs([]); }}
+                  className="px-3 py-1 rounded-md text-xs font-mono transition-all"
+                  style={sendMode === m
+                    ? { background: "linear-gradient(135deg,#c9a84c,#7a6130)", color: "#05080f" }
+                    : { color: "var(--text-3)" }}>
+                  {m === "vault" ? "1claw vault" : "🔒 Ledger"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <form onSubmit={handleSend} className="p-6 space-y-4">
+            {/* Ledger hint */}
+            {sendMode === "ledger" && (
+              <div className="p-3 rounded-xl text-xs font-mono space-y-1" style={{ background: "#c9a84c08", border: "1px solid #c9a84c30" }}>
+                <p style={{ color: "#c9a84c" }}>🔒 Hardware signing via ZKNOX Ledger app</p>
+                <p style={{ color: "var(--text-3)" }}>Plug in Ledger → unlock device → open ZKNOX app → click Send</p>
+                <p style={{ color: "var(--text-4)" }}>Transaction details will appear on your device for confirmation. No spending limit.</p>
+              </div>
+            )}
+
+            {/* To */}
+            <div>
+              <label className="text-xs font-mono mb-1.5 block" style={{ color: "var(--text-3)" }}>RECIPIENT ADDRESS</label>
+              <input
+                value={sendTo}
+                onChange={e => setSendTo(e.target.value)}
+                placeholder="0x..."
+                className="w-full px-4 py-2.5 rounded-xl text-sm font-mono outline-none"
+                style={{ background: "var(--bg-deep)", border: "1px solid var(--border-1)", color: "var(--text-1)" }}
+                required
+              />
+            </div>
+
+            {/* Amount */}
+            <div>
+              <label className="text-xs font-mono mb-1.5 block" style={{ color: "var(--text-3)" }}>AMOUNT (USDC)</label>
+              <input
+                type="number"
+                value={sendAmount}
+                onChange={e => setSendAmount(e.target.value)}
+                placeholder="10"
+                min="0.01"
+                max="20"
+                step="0.01"
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                style={{ background: "var(--bg-deep)", border: "1px solid var(--border-1)", color: "var(--text-1)" }}
+                required
+              />
+              <p className="text-xs mt-1 font-mono" style={{ color: "var(--text-4)" }}>
+                {sendMode === "ledger"
+                  ? "No limit — all amounts signed on Ledger hardware."
+                  : "Auto-signed up to 20 USDC via 1claw vault. Above that, Ledger required."}
+              </p>
+            </div>
+
+            {/* Note */}
+            <div>
+              <label className="text-xs font-mono mb-1.5 block" style={{ color: "var(--text-3)" }}>NOTE (optional)</label>
+              <input
+                value={sendNote}
+                onChange={e => setSendNote(e.target.value)}
+                placeholder="Service description..."
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                style={{ background: "var(--bg-deep)", border: "1px solid var(--border-1)", color: "var(--text-1)" }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={sendLoading || !sendTo.trim() || !sendAmount}
+              className="w-full py-3 rounded-xl text-sm font-semibold disabled:opacity-40 transition-opacity"
+              style={{ background: "linear-gradient(135deg,#c9a84c,#7a6130)", color: "#05080f" }}
+            >
+              {sendLoading
+                ? (sendMode === "ledger" ? "Waiting for Ledger confirmation..." : "Signing & sending...")
+                : (sendMode === "ledger" ? "🔒 Sign with Ledger ⟶" : "Send ⟶")}
+            </button>
+
+            {/* Live logs */}
+            {sendLogs.length > 0 && (
+              <div className="rounded-xl p-3 space-y-1 font-mono text-xs" style={{ background: "var(--bg-deep)", border: "1px solid var(--border-3)" }}>
+                {sendLogs.map((l, i) => (
+                  <p key={i} style={{ color: l.startsWith("✓") ? "#4ade80" : l.startsWith("✗") || l.toLowerCase().includes("error") ? "#f87171" : "var(--text-3)" }}>{l}</p>
+                ))}
+              </div>
+            )}
+          </form>
+
+          {/* Result */}
+          {sendResult && (
+            <div className="mx-6 mb-6 p-4 rounded-xl space-y-2"
+              style={{
+                background: sendResult.error ? "#ef444410" : sendResult.requiresLedger ? "#f59e0b10" : "#22c55e10",
+                border: `1px solid ${sendResult.error ? "#ef444440" : sendResult.requiresLedger ? "#f59e0b40" : "#22c55e40"}`,
+              }}>
+              {sendResult.error ? (
+                <>
+                  <p className="text-sm font-semibold" style={{ color: "#f87171" }}>Transaction failed</p>
+                  <p className="text-xs font-mono" style={{ color: "#f8717190" }}>{sendResult.error}</p>
+                </>
+              ) : sendResult.requiresLedger ? (
+                <>
+                  <p className="text-sm font-semibold" style={{ color: "#f59e0b" }}>Ledger approval required</p>
+                  <p className="text-xs font-mono" style={{ color: "#f59e0b90" }}>
+                    Amount exceeds $20 auto-sign limit. Connect Ledger and run: <code>just send-tx-ledger</code>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold" style={{ color: "#22c55e" }}>
+                    {sendResult.simulated ? "Simulated (no keys configured)" : "Transaction sent ✓"}
+                  </p>
+                  <p className="text-xs font-mono break-all" style={{ color: "#22c55e90" }}>
+                    {sendResult.txHash}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 

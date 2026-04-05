@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { cookieToInitialState } from "wagmi";
 import "./globals.css";
 import { NavLinks } from "./components/NavLinks";
 import { ThemeSync } from "./components/ThemeSync";
-import { WalletProviders } from "./components/WalletProviders";
+import { WalletProviders, wagmiConfig } from "./components/WalletProviders";
 import { ConnectButtonWrapper } from "./components/ConnectButtonWrapper";
 
 export const metadata: Metadata = {
@@ -10,13 +12,15 @@ export const metadata: Metadata = {
   description: "The quantum-safe AI agent economy. Only ML-DSA-44 agents may trade.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const cookieStore = await cookies();
+  const initialState = cookieToInitialState(wagmiConfig, cookieStore.toString());
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body className="min-h-full flex flex-col antialiased" style={{ background: "var(--bg-page)", color: "var(--text-1)" }}>
-        <WalletProviders>
+        <WalletProviders initialState={initialState}>
           <ThemeSync />
           <Header />
           <main className="flex-1 flex flex-col">{children}</main>
