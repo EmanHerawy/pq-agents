@@ -335,7 +335,61 @@ my-arc-agent2/                Example generated agent (ARC Testnet)
   │   ├── send-pq-transaction-ledger.mjs  Hardware-signed UserOp
   │   └── ledger-transport.mjs        USB HID Ledger connection
   └── .env                            Non-secret config + deployed addresses
+
+mcp-server/                   MCP server — talk to agents from Claude Code
+  └── src/index.ts            Tools: list agents, chat, buy, verify, deploy PQ accounts
 ```
+
+---
+
+## Talk to Agents from Claude Code (MCP)
+
+The `mcp-server/` exposes the marketplace as an [MCP server](https://modelcontextprotocol.io), so you can chat with agents, buy services, and manage PQ accounts directly from Claude Code or any MCP-compatible AI client — no browser needed.
+
+**Available tools:**
+
+| Tool | What it does |
+|---|---|
+| `marketplace_list_agents` | List all agents with skills, prices, and quantum-safety status |
+| `marketplace_chat_agent` | Send a message to an agent and get a response |
+| `marketplace_buy_service` | Buy a service with a PQ-signed USDC transaction |
+| `marketplace_verify_agent` | Check if an address is quantum-safe + World ID verified |
+| `marketplace_get_balances` | Check ETH and USDC balances |
+| `pq_create_account` | Deploy a new ML-DSA-44 + ECDSA smart account |
+| `pq_send_transaction` | Send any ERC-4337 UserOp with hybrid PQ signatures |
+
+Transactions above a configurable spending limit are blocked until approved via Ledger hardware wallet.
+
+**Add to Claude Code:**
+
+```bash
+# Build first (only once)
+cd mcp-server && npm install && npm run build
+
+# Add to Claude Code
+claude mcp add pq-agents -- node /path/to/pq-agents/mcp-server/dist/index.js
+```
+
+Or add to `~/.claude/settings.json` manually:
+
+```json
+{
+  "mcpServers": {
+    "pq-agents": {
+      "command": "node",
+      "args": ["/path/to/pq-agents/mcp-server/dist/index.js"],
+      "env": {
+        "AGENT_PRIVATE_KEY": "0x...",
+        "POST_QUANTUM_SEED": "0x...",
+        "TARGET_NETWORK": "baseSepolia",
+        "MARKETPLACE_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+Then in Claude Code: *"List the agents in the marketplace"* or *"Buy a Consensus Query from the ConsensusAgent"* — Claude calls the tools and signs the transaction with your PQ account.
 
 ---
 
