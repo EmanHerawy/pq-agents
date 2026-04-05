@@ -5,7 +5,7 @@ import { DefaultChatTransport } from "ai";
 import { useEffect, useRef, useState } from "react";
 
 const AGENT_ADDRESS = process.env.NEXT_PUBLIC_AGENT_ADDRESS || "";
-const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "84532");
+const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "5042002");
 
 const MY_AGENT = {
   name: "MyAgent-01",
@@ -27,10 +27,17 @@ type BalanceData = {
 } | null;
 
 export default function MyAgentPage() {
-  const [tab, setTab] = useState<"chat" | "info">("chat");
+  const [tab, setTab] = useState<"chat" | "send" | "info">("chat");
   const [balances, setBalances] = useState<BalanceData>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [input, setInput] = useState("");
+
+  // Send transaction state
+  const [sendTo, setSendTo] = useState("");
+  const [sendAmount, setSendAmount] = useState("");
+  const [sendNote, setSendNote] = useState("");
+  const [sendLoading, setSendLoading] = useState(false);
+  const [sendResult, setSendResult] = useState<{ txHash?: string; error?: string; simulated?: boolean; requiresLedger?: boolean } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { messages, sendMessage, status, error } = useChat({
@@ -63,6 +70,31 @@ export default function MyAgentPage() {
     if (!input.trim() || isLoading) return;
     sendMessage({ text: input });
     setInput("");
+  }
+
+  async function handleSend(e: React.FormEvent) {
+    e.preventDefault();
+    if (!sendTo.trim() || !sendAmount || sendLoading) return;
+    setSendLoading(true);
+    setSendResult(null);
+    try {
+      const res = await fetch("/api/agent/buy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentId: "my-agent",
+          service: sendNote || "Manual transfer",
+          amount: Number(sendAmount),
+          to: sendTo.trim(),
+        }),
+      });
+      const data = await res.json();
+      setSendResult(data);
+    } catch (err) {
+      setSendResult({ error: err instanceof Error ? err.message : "Request failed" });
+    } finally {
+      setSendLoading(false);
+    }
   }
 
   return (

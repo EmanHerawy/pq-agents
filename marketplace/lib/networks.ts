@@ -16,7 +16,7 @@ export const RPC_OVERRIDES: Record<string, string> = {};
 // ─── Types ─────────────────────────────────────────────────────────────────
 export type NetworkKey =
   | "ethereum" | "base" | "sepolia" | "baseSepolia"
-  | "polygon" | "bnb" | "localhost";
+  | "polygon" | "bnb" | "localhost" | "arcTestnet";
 
 export type TokenDef = {
   symbol: string;
@@ -88,6 +88,14 @@ export const NETWORKS: Record<NetworkKey, NetworkDefinition> = {
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
     rpcUrl: "http://127.0.0.1:8545", blockExplorerUrl: "http://localhost:8545",
     tokens: [],
+  },
+  arcTestnet: {
+    key: "arcTestnet", chainId: 5042002, name: "ARC Testnet",
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrl: "https://rpc.testnet.arc.network", blockExplorerUrl: "https://explorer.testnet.arc.network",
+    tokens: [
+      { symbol: "USDC", address: "0x5FbDB2315678afecb367f032d93F642f64180aa3", decimals: 6 },
+    ],
   },
 };
 
