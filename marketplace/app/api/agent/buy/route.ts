@@ -60,7 +60,9 @@ export async function POST(req: NextRequest) {
   const bundlerUrl = process.env.NEXT_PUBLIC_BUNDLER_URL || "";
   // PQ_ACCOUNT_ADDRESS is the deployed ERC-4337 smart account (AA20 requires this, not the raw ECDSA key)
   const accountAddress = process.env.PQ_ACCOUNT_ADDRESS || process.env.AGENT_ADDRESS || "";
-  console.log("[api/agent/buy] key source:", source);
+  const { ethers: diagEthers } = await import("ethers");
+  const ecdsaAddr = preQuantumSeed ? new diagEthers.Wallet(preQuantumSeed).address : "MISSING";
+  console.log("[api/agent/buy] key source:", source, "| ECDSA addr:", ecdsaAddr, "| PQ seed:", postQuantumSeed ? "present" : "MISSING", "| account:", accountAddress);
 
   // Simulation mode when keys not configured
   if (!preQuantumSeed || !postQuantumSeed || !accountAddress) {

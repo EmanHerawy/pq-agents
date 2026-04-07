@@ -1,4 +1,4 @@
-import { ml_dsa44 } from "@noble/post-quantum/ml-dsa.js";
+import { ml_dsa44 } from "@noble/post-quantum/ml-dsa";
 import { BrowserProvider, ethers, isAddress } from "ethers";
 import { hexToU8 } from "./hex";
 import {
